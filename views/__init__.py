@@ -9,7 +9,7 @@ from views.team_registration import TeamCard, TeamRegistrationView
 from views.team_selection import TeamSelectionView
 from views.dashboard import DashboardView
 from views.marketplace import ItemCard, MarketplaceView
-from views.roulette import SlotReel, RouletteView
+from views.roulette import RouletteView
 from views.history import HistoryView
 
 __all__ = [
@@ -21,7 +21,6 @@ __all__ = [
     "DashboardView",
     "ItemCard",
     "MarketplaceView",
-    "SlotReel",
     "RouletteView",
     "HistoryView",
 ]
