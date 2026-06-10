@@ -134,20 +134,8 @@ class MarketplaceView(ft.Column):
         self.get_team_info = get_team_info
         self.on_back = on_back
         self.active_category = "전체"
-        self._file_picker = None
         self._picked_image_path = None
         self._build()
-
-    def did_mount(self):
-        self._file_picker = ft.FilePicker()
-        self._file_picker.on_result = self._on_file_picked
-        self.page.overlay.append(self._file_picker)
-        self.page.update()
-
-    def will_unmount(self):
-        if self._file_picker and self._file_picker in self.page.overlay:
-            self.page.overlay.remove(self._file_picker)
-            self.page.update()
 
     def _build(self):
         self.controls.clear()
@@ -405,17 +393,15 @@ class MarketplaceView(ft.Column):
         )
 
     def _on_pick_file_click(self, e):
-        if self._file_picker:
-            self._file_picker.pick_files(
-                allowed_extensions=["png", "jpg", "jpeg", "gif", "bmp"],
-                allow_multiple=False,
-            )
-
-    def _on_file_picked(self, e):
-        if e.files:
-            self._picked_image_path = e.files[0].path
+        fp = ft.FilePicker()
+        files = fp.pick_files(
+            allowed_extensions=["png", "jpg", "jpeg", "gif", "bmp"],
+            allow_multiple=False,
+        )
+        if files:
+            self._picked_image_path = files[0].path
             if hasattr(self, "_file_name_text"):
-                self._file_name_text.value = e.files[0].name
+                self._file_name_text.value = files[0].name
                 self._file_name_text.update()
         else:
             self._picked_image_path = None
