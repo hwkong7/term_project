@@ -28,6 +28,10 @@ class IItemRepository(ABC):
     @abstractmethod
     def find_new_items(self) -> pd.DataFrame: ...
     @abstractmethod
+    def find_custom_items(self) -> pd.DataFrame: ...
+    @abstractmethod
+    def save_one(self, name: str, category_name: str, price: int, image_path: "str | None") -> int: ...
+    @abstractmethod
     def update(self, df: pd.DataFrame): ...
     @abstractmethod
     def delete_by_id(self, item_id: int) -> bool: ...
@@ -209,6 +213,27 @@ class DuckDBItemRepository(IItemRepository):
             INNER JOIN category c ON i.category_name = c.name
             WHERE i.is_new = TRUE
         """).fetchdf()
+
+    def find_custom_items(self) -> pd.DataFrame:
+        return self.conn.execute("""
+            SELECT i.id, i.name, c.name AS category,
+                   i.price, i.image_path, i.is_new
+            FROM item i
+            INNER JOIN category c ON i.category_name = c.name
+            WHERE i.is_custom = TRUE
+            ORDER BY i.id
+        """).fetchdf()
+
+    def save_one(self, name: str, category_name: str, price: int, image_path: "str | None") -> int:
+        new_id = self.conn.execute(
+            "SELECT COALESCE(MAX(id), 0) + 1 FROM item"
+        ).fetchone()[0]
+        self.conn.execute(
+            "INSERT INTO item (id, name, category_name, price, image_path, is_new, is_custom) "
+            "VALUES (?, ?, ?, ?, ?, FALSE, TRUE)",
+            [new_id, name, category_name, price, image_path],
+        )
+        return int(new_id)
 
     def update(self, df: pd.DataFrame):
         for _, r in df.iterrows():

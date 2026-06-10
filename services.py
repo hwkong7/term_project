@@ -98,6 +98,20 @@ class ItemService:
     def find_by_id(self, item_id: int) -> Optional[dict]:
         return self.item_repo.find_by_id(item_id)
 
+    def add_custom_item(self, name: str, category_name: str, price: int,
+                        image_path: Optional[str]) -> int:
+        if not name.strip():
+            raise ValueError("아이템 이름이 비어 있습니다.")
+        if price < 0:
+            raise ValueError("가격은 0 이상이어야 합니다.")
+        cats = self.category_repo.find_all()["name"].tolist()
+        if category_name not in cats:
+            raise ValueError(f"존재하지 않는 카테고리: {category_name}")
+        return self.item_repo.save_one(name.strip(), category_name, price, image_path)
+
+    def find_custom_items(self) -> pd.DataFrame:
+        return self.item_repo.find_custom_items()
+
 
 # ============================================================
 # 3.3 TradeService
