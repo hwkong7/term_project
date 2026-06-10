@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# DuckDB 런타임 데이터
+data/
+
+# Claude Code 내부 설정
+.claude/

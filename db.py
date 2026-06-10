@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS item (
     price INTEGER NOT NULL CHECK (price >= 0),
     image_path VARCHAR,
     is_new BOOLEAN NOT NULL DEFAULT FALSE,
+    is_custom BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (category_name) REFERENCES category (name)
 );
 
@@ -136,6 +137,14 @@ class Database:
             print("[DB] 스키마 및 마스터 데이터 초기화 완료")
         else:
             print("[DB] 기존 DB 연결")
+
+        # 마이그레이션: is_custom 컬럼이 없으면 추가
+        try:
+            self.conn.execute("SELECT is_custom FROM item LIMIT 0")
+        except Exception:
+            self.conn.execute(
+                "ALTER TABLE item ADD COLUMN is_custom BOOLEAN DEFAULT FALSE"
+            )
 
     def reset_game_data(self):
         self.conn.execute("DELETE FROM roulette_spin")
