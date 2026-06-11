@@ -142,7 +142,8 @@ class MarketplaceView(ft.Column):
         self._build()
 
     def did_mount(self):
-        self._file_picker = ft.FilePicker(on_result=self._on_file_picked)
+        self._file_picker = ft.FilePicker()
+        self._file_picker.on_result = self._on_file_picked
         self.page.overlay.append(self._file_picker)
         self.page.update()
 
