@@ -399,9 +399,9 @@ class MarketplaceView(ft.Column):
             padding=ft.Padding.symmetric(horizontal=16),
         )
 
-    def _on_pick_file_click(self, e):
+    async def _on_pick_file_click(self, e):
         fp = ft.FilePicker()
-        files = fp.pick_files(
+        files = await fp.pick_files(
             allowed_extensions=["png", "jpg", "jpeg", "gif", "bmp"],
             allow_multiple=False,
         )
