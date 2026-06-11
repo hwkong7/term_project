@@ -1,11 +1,13 @@
 """
 views/roulette.py
-룰렛 화면 (4.4) — 슬롯머신 애니메이션.
+룰렛 화면 (4.4) — async 슬롯머신 애니메이션.
+
+animate_position + 스레드 방식 → async/await + 텍스트 사이클링 방식으로 변경.
+Flet 이벤트 루프 위에서 직접 실행하므로 끊김 없이 매끄럽게 동작한다.
 """
 
+import asyncio
 import flet as ft
-import threading
-import time
 from typing import Callable, List
 
 from theme import (
@@ -15,6 +17,7 @@ from theme import (
     TEXT_MUTED,
     TEXT_GOLD,
     ACCENT_RED,
+    ACCENT_ORANGE,
     TEAM_COLORS,
     format_won,
     format_won_man,
@@ -22,75 +25,46 @@ from theme import (
 from services import RouletteService, RouletteError, SPIN_COST
 from views._helpers import _snack
 
+# 룰렛 금액 목록
+_AMOUNTS = [500_000, 800_000, 1_000_000, 1_500_000, 2_000_000, 2_500_000, 3_000_000]
 
-class SlotReel(ft.Container):
-    """슬롯머신 한 칸 — Stack 안에서 위로 움직이는 띠"""
 
-    def __init__(
-        self, width: int, height: int, items: List[str], color: str = TEXT_DARK
-    ):
-        self.item_height = height
-        self.items = items
-        self.text_color = color
+class _ReelDisplay(ft.Container):
+    """슬롯머신 한 칸 — 큰 텍스트를 교체해 사이클링 효과를 낸다."""
 
-        self.text_controls = [
-            ft.Container(
-                content=ft.Text(
-                    text,
-                    size=32,
-                    weight=ft.FontWeight.BOLD,
-                    color=self.text_color,
-                    text_align=ft.TextAlign.CENTER,
-                ),
-                width=width,
-                height=height,
-                alignment=ft.Alignment.CENTER,
-            )
-            for text in items
-        ]
-
-        self.strip = ft.Column(
-            controls=self.text_controls,
-            spacing=0,
-            tight=True,
+    def __init__(self, width: int):
+        self._label = ft.Text(
+            "???",
+            size=38,
+            weight=ft.FontWeight.BOLD,
+            color=TEXT_DARK,
+            text_align=ft.TextAlign.CENTER,
         )
-
-        self.strip_container = ft.Container(
-            content=self.strip,
-            top=0,
-            left=0,
-            animate_position=ft.Animation(80, ft.AnimationCurve.LINEAR),
-        )
-
         super().__init__(
-            content=ft.Stack(
-                [self.strip_container], clip_behavior=ft.ClipBehavior.HARD_EDGE
+            content=ft.Container(
+                content=self._label,
+                alignment=ft.Alignment.CENTER,
             ),
             width=width,
-            height=height,
+            height=100,
             bgcolor="#D4C4A0",
             border=ft.Border.all(3, TEXT_GOLD),
+            alignment=ft.Alignment.CENTER,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
 
-    def set_position(
-        self, index: int, duration_ms: int = 80, curve=ft.AnimationCurve.LINEAR
-    ):
-        """띠를 위로 올려서 index 번째 항목이 가운데에 오게 함"""
-        self.strip_container.animate_position = ft.Animation(duration_ms, curve)
-        self.strip_container.top = -index * self.item_height
-        self.strip_container.update()
+    def set_value(self, text: str, color: str = TEXT_DARK):
+        self._label.value = text
+        self._label.color = color
+        self._label.update()
 
-    def reset_instant(self):
-        """애니메이션 없이 즉시 top=0으로 리셋"""
-        self.strip_container.animate_position = ft.Animation(
-            1, ft.AnimationCurve.LINEAR
-        )
-        self.strip_container.top = 0
-        self.strip_container.update()
+    def flash(self, color: str):
+        self.bgcolor = color
+        self.update()
 
-    def get_text(self, index: int) -> str:
-        return self.items[index % len(self.items)]
+    def unflash(self):
+        self.bgcolor = "#D4C4A0"
+        self.update()
 
 
 class RouletteView(ft.Column):
@@ -113,27 +87,15 @@ class RouletteView(ft.Column):
         self.is_spinning = False
 
         self._all_teams = get_all_teams()
-        team_names = [t["name"] for t in self._all_teams]
-        self.team_strip = team_names * 8
-        amount_labels = [
-            format_won_man(a)
-            for a in [
-                500_000,
-                800_000,
-                1_000_000,
-                1_500_000,
-                2_000_000,
-                2_500_000,
-                3_000_000,
-            ]
-        ]
-        self.amount_strip = amount_labels * 8
+        self._team_names = [t["name"] for t in self._all_teams]
+        self._amount_labels = [format_won_man(a) for a in _AMOUNTS]
 
-        self.team_reel = SlotReel(320, 100, self.team_strip, TEXT_DARK)
-        self.amount_reel = SlotReel(320, 100, self.amount_strip, TEXT_DARK)
+        self.team_reel = _ReelDisplay(300)
+        self.amount_reel = _ReelDisplay(300)
 
-        self.team_status = ft.Text("READY", size=16, color=TEXT_MUTED)
-        self.amount_status = ft.Text("READY", size=16, color=TEXT_MUTED)
+        self.team_status = ft.Text("READY", size=15, color=TEXT_MUTED)
+        self.amount_status = ft.Text("READY", size=15, color=TEXT_MUTED)
+
         self._build()
 
     def _build(self):
@@ -264,7 +226,7 @@ class RouletteView(ft.Column):
                     bgcolor="#2A1C0E",
                     padding=ft.Padding.symmetric(vertical=8),
                     alignment=ft.Alignment.CENTER,
-                    width=320,
+                    width=300,
                 ),
                 reel,
                 ft.Container(
@@ -360,9 +322,10 @@ class RouletteView(ft.Column):
             padding=ft.Padding.symmetric(horizontal=12, vertical=8),
         )
 
-    def _on_spin_click(self, e):
+    async def _on_spin_click(self, e):
         if self.is_spinning:
             return
+
         try:
             result = self.svc.execute_spin(self.current_team_id)
         except RouletteError as ex:
@@ -373,73 +336,71 @@ class RouletteView(ft.Column):
             return
 
         self.is_spinning = True
-        self.spin_button.bgcolor = "#555555"
+        self.spin_button.bgcolor = "#444444"
         self.spin_button.content = ft.Text(
             "⏳ SPINNING...", color="#AAAAAA", size=18, weight=ft.FontWeight.W_500
         )
-        self.team_status.value = "SPINNING..."
-        self.team_status.color = TEXT_MUTED
-        self.amount_status.value = "CALCULATING..."
-        self.amount_status.color = TEXT_MUTED
+        self.team_status.value = ""
+        self.amount_status.value = ""
         self.spin_button.update()
         self.team_status.update()
         self.amount_status.update()
 
-        threading.Thread(target=self._animate, args=(result,), daemon=True).start()
+        await self._animate(result)
 
-    def _animate(self, result):
-        # 0. 이전 위치 즉시 리셋 (역방향 방지)
-        self.team_reel.reset_instant()
-        self.amount_reel.reset_instant()
-        time.sleep(0.08)  # 리셋 렌더링 대기
+    async def _animate(self, result):
+        """
+        async 슬롯머신 애니메이션.
+        총 30프레임: 처음엔 빠르게(0.04s), 갈수록 느려지다(0.25s) 결과에서 정지.
+        마지막 5프레임은 결과값을 보여주며 확실히 감속.
+        """
+        TOTAL = 30
+        SETTLE = 5  # 마지막 N프레임은 결과값 고정
 
-        # 결과 인덱스 계산
-        team_names = [t["name"] for t in self._all_teams]
-        target_team_idx = team_names.index(result["target_name"])
-        team_target_index = 6 * len(team_names) + target_team_idx
+        for i in range(TOTAL):
+            # easeOut 커브: 시작 빠름 → 끝 느림
+            t = i / (TOTAL - 1)
+            delay = 0.04 + (t**2) * 0.22
 
-        amount_labels = [
-            format_won_man(a)
-            for a in [
-                500_000,
-                800_000,
-                1_000_000,
-                1_500_000,
-                2_000_000,
-                2_500_000,
-                3_000_000,
-            ]
-        ]
-        amount_target_idx = amount_labels.index(
-            format_won_man(result["penalty_amount"])
-        )
-        amount_target_index = 6 * len(amount_labels) + amount_target_idx
+            if i < TOTAL - SETTLE:
+                # 빠르게 순환
+                team_val = self._team_names[i % len(self._team_names)]
+                amt_val = self._amount_labels[i % len(self._amount_labels)]
+                self.team_reel.set_value(team_val, TEXT_DARK)
+                self.amount_reel.set_value(amt_val, TEXT_DARK)
+            else:
+                # 결과값으로 서서히 고정
+                self.team_reel.set_value(result["target_name"], TEXT_DARK)
+                self.amount_reel.set_value(
+                    format_won_man(result["penalty_amount"]), TEXT_DARK
+                )
 
-        # 1단계: 빠르게 (EASE_IN으로 가속감)
-        self.team_reel.set_position(
-            team_target_index - 6, duration_ms=1000, curve=ft.AnimationCurve.EASE_IN
-        )
-        self.amount_reel.set_position(
-            amount_target_index - 8, duration_ms=1200, curve=ft.AnimationCurve.EASE_IN
-        )
-        time.sleep(1.1)
+            await asyncio.sleep(delay)
 
-        # 2단계: 감속 정지
-        self.team_reel.set_position(
-            team_target_index, duration_ms=700, curve=ft.AnimationCurve.DECELERATE
-        )
-        time.sleep(0.4)
-        self.amount_reel.set_position(
-            amount_target_index, duration_ms=800, curve=ft.AnimationCurve.DECELERATE
-        )
-        time.sleep(0.9)
+        # 결과 확정 — 3번 깜빡임
+        for _ in range(3):
+            self.team_reel.set_value(result["target_name"], TEXT_GOLD)
+            self.amount_reel.set_value(
+                format_won_man(result["penalty_amount"]), ACCENT_RED
+            )
+            await asyncio.sleep(0.18)
+            self.team_reel.set_value(result["target_name"], TEXT_DARK)
+            self.amount_reel.set_value(
+                format_won_man(result["penalty_amount"]), TEXT_DARK
+            )
+            await asyncio.sleep(0.12)
 
-        # 결과 표시
-        target_team = self.get_team_info(result["target_team_id"])
+        # 최종 색상 고정
+        self.team_reel.set_value(result["target_name"], TEXT_GOLD)
+        self.amount_reel.set_value(format_won_man(result["penalty_amount"]), ACCENT_RED)
+
+        # 상태 텍스트 표시
         self.team_status.value = f"🎯 {result['target_name']}팀"
-        self.team_status.color = ACCENT_RED
+        self.team_status.color = TEXT_GOLD
         self.amount_status.value = f"💸 {format_won(result['penalty_amount'])} 차감!"
         self.amount_status.color = ACCENT_RED
+        self.team_status.update()
+        self.amount_status.update()
 
         # 버튼 재활성화
         self.is_spinning = False
@@ -450,23 +411,21 @@ class RouletteView(ft.Column):
             weight=ft.FontWeight.W_500,
         )
         self.spin_button.bgcolor = ACCENT_RED
+        self.spin_button.update()
 
-        try:
-            self.controls[2] = self._build_recent()
-            self.controls[0] = self._build_header()
-            self.spin_button.update()
-            self.team_status.update()
-            self.amount_status.update()
-            self.update()
+        # 최근 결과 + 헤더 갱신
+        self.controls[2] = self._build_recent()
+        self.controls[0] = self._build_header()
+        self.update()
 
-            _snack(
-                self.page,
-                f"🎰 {result['target_name']}팀 {format_won(result['penalty_amount'])} 차감!",
-                ACCENT_RED,
-            )
+        _snack(
+            self.page,
+            f"🎰 {result['target_name']}팀 {format_won(result['penalty_amount'])} 차감!",
+            ACCENT_RED,
+        )
 
-            if target_team and target_team["current_balance"] <= 0 and self.on_bankrupt:
-                time.sleep(0.8)
-                self.on_bankrupt(target_team["name"])
-        except Exception:
-            pass
+        # 파산 체크
+        target_team = self.get_team_info(result["target_team_id"])
+        if target_team and target_team["current_balance"] <= 0 and self.on_bankrupt:
+            await asyncio.sleep(0.8)
+            self.on_bankrupt(target_team["name"])
