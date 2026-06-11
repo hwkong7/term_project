@@ -75,6 +75,7 @@ class RouletteView(ft.Column):
         get_all_teams,
         on_back,
         on_bankrupt: Callable = None,
+        on_winner: Callable = None,
     ):
         super().__init__(spacing=12, scroll=ft.ScrollMode.AUTO, expand=True)
         self.svc = roulette_service
@@ -83,6 +84,7 @@ class RouletteView(ft.Column):
         self.get_all_teams = get_all_teams
         self.on_back = on_back
         self.on_bankrupt = on_bankrupt
+        self.on_winner = on_winner
         self.is_spinning = False
 
         self._all_teams = get_all_teams()
@@ -356,3 +358,10 @@ class RouletteView(ft.Column):
         if target_team and target_team["current_balance"] <= 0 and self.on_bankrupt:
             await asyncio.sleep(0.8)
             self.on_bankrupt(target_team["name"])
+
+        # 우승 판정: 생존팀이 1팀만 남으면
+        all_teams = self.get_all_teams()
+        surviving = [t for t in all_teams if t["current_balance"] > 0]
+        if len(surviving) == 1 and self.on_winner:
+            await asyncio.sleep(0.5)
+            self.on_winner(surviving[0]["name"], surviving[0]["current_balance"])

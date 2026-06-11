@@ -35,6 +35,7 @@ from views import (
     RouletteView,
     HistoryView,
     show_bankrupt_dialog,
+    show_winner_dialog,
 )
 from theme import BG_MAIN
 
@@ -85,8 +86,18 @@ def main(page: ft.Page):
         rec = container.image_repo.find_by_key("BANKRUPT")
         return rec["image_path"] if rec else None
 
+    def get_winner_image():
+        rec = container.image_repo.find_by_key("WINNER")
+        return rec["image_path"] if rec else None
+
     def show_bankrupt(team_name):
         show_bankrupt_dialog(page, team_name, get_bankrupt_image())
+
+    def show_winner(team_name, final_balance):
+        show_winner_dialog(
+            page, team_name, final_balance,
+            get_winner_image(), on_new_game=reset_game
+        )
 
     # 화면 전환
     def show_team_registration():
@@ -168,6 +179,7 @@ def main(page: ft.Page):
                 get_all_teams=get_all_teams,
                 on_back=show_dashboard,
                 on_bankrupt=show_bankrupt,
+                on_winner=show_winner,
             )
         )
         page.update()

@@ -92,7 +92,8 @@ INSERT INTO team_color (code, hex_value) VALUES
 INSERT INTO category (name) VALUES ('광물'), ('식량');
 
 INSERT INTO system_image (key, image_path, description) VALUES
-    ('BANKRUPT', 'assets/bankrupt.png', '파산 알림 이미지');
+    ('BANKRUPT', 'assets/bankrupt.png', '파산 알림 이미지'),
+    ('WINNER',   'assets/winner.png',   '우승 알림 이미지');
 
 INSERT INTO item (id, name, category_name, price, image_path, is_new) VALUES
     (1, '다이아몬드', '광물',  50000, 'assets/diamond.png',  FALSE),
@@ -144,6 +145,16 @@ class Database:
         except Exception:
             self.conn.execute(
                 "ALTER TABLE item ADD COLUMN is_custom BOOLEAN DEFAULT FALSE"
+            )
+
+        # 마이그레이션: WINNER 이미지가 없으면 삽입
+        count = self.conn.execute(
+            "SELECT COUNT(*) FROM system_image WHERE key = 'WINNER'"
+        ).fetchone()[0]
+        if count == 0:
+            self.conn.execute(
+                "INSERT INTO system_image (key, image_path, description) VALUES "
+                "('WINNER', 'assets/winner.png', '우승 알림 이미지')"
             )
 
     def reset_game_data(self):
