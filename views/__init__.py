@@ -4,7 +4,7 @@ views/__init__.py
 """
 
 from views._helpers import _snack
-from views.dialogs import show_bankrupt_dialog
+from views.dialogs import show_bankrupt_dialog, show_winner_dialog
 from views.team_registration import TeamCard, TeamRegistrationView
 from views.team_selection import TeamSelectionView
 from views.dashboard import DashboardView
@@ -15,6 +15,7 @@ from views.history import HistoryView
 __all__ = [
     "_snack",
     "show_bankrupt_dialog",
+    "show_winner_dialog",
     "TeamCard",
     "TeamRegistrationView",
     "TeamSelectionView",

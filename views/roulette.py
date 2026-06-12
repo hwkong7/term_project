@@ -76,6 +76,7 @@ class RouletteView(ft.Column):
         get_all_teams,
         on_back,
         on_bankrupt: Callable = None,
+        on_winner: Callable = None,
     ):
         super().__init__(spacing=12, scroll=ft.ScrollMode.AUTO, expand=True)
         self.svc = roulette_service
@@ -84,6 +85,7 @@ class RouletteView(ft.Column):
         self.get_all_teams = get_all_teams
         self.on_back = on_back
         self.on_bankrupt = on_bankrupt
+        self.on_winner = on_winner
         self.is_spinning = False
 
         self._all_teams = get_all_teams()
@@ -106,6 +108,12 @@ class RouletteView(ft.Column):
 
     def _build_header(self):
         team = self.get_team_info(self.current_team_id)
+        # 팀이 파산하거나 조회 실패 시 None 방어 처리
+        team_color = (
+            TEAM_COLORS.get(team["color_code"], "#888888") if team else "#888888"
+        )
+        team_name = team["name"] if team else "-"
+        team_bal = format_won(int(team["current_balance"])) if team else "₩0"
         return ft.Container(
             content=ft.Row(
                 [
@@ -141,19 +149,19 @@ class RouletteView(ft.Column):
                                     content=ft.Text(":)", size=14, color=TEXT_DARK),
                                     width=28,
                                     height=28,
-                                    bgcolor=TEAM_COLORS[team["color_code"]],
+                                    bgcolor=team_color,
                                     border=ft.Border.all(2, TEXT_DARK),
                                     alignment=ft.Alignment.CENTER,
                                 ),
                                 ft.Text(
-                                    f"{team['name']}팀",
+                                    f"{team_name}팀",
                                     color=TEXT_LIGHT,
                                     size=14,
                                     weight=ft.FontWeight.W_500,
                                 ),
                                 ft.Text("잔액", color=TEXT_MUTED, size=12),
                                 ft.Text(
-                                    format_won(int(team["current_balance"])),
+                                    team_bal,
                                     color=TEXT_GOLD,
                                     size=15,
                                     weight=ft.FontWeight.W_500,
@@ -429,3 +437,12 @@ class RouletteView(ft.Column):
         if target_team and target_team["current_balance"] <= 0 and self.on_bankrupt:
             await asyncio.sleep(0.8)
             self.on_bankrupt(target_team["name"])
+
+        # 우승 판정: 생존팀(잔액 > 0)이 1팀만 남으면 우승
+        await asyncio.sleep(0.3)
+        all_teams = self.get_all_teams()
+        surviving = [t for t in all_teams if t["current_balance"] > 0]
+        if len(surviving) == 1 and self.on_winner:
+            winner = surviving[0]
+            await asyncio.sleep(0.5)
+            self.on_winner(winner["name"], int(winner["current_balance"]))

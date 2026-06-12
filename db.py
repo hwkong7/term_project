@@ -92,7 +92,8 @@ INSERT INTO team_color (code, hex_value) VALUES
 INSERT INTO category (name) VALUES ('광물'), ('식량');
 
 INSERT INTO system_image (key, image_path, description) VALUES
-    ('BANKRUPT', 'assets/bankrupt.png', '파산 알림 이미지');
+    ('BANKRUPT', 'assets/bankrupt.png', '파산 알림 이미지'),
+    ('WINNER',   'assets/winner.png',   '우승 알림 이미지');
 
 INSERT INTO item (id, name, category_name, price, image_path, is_new) VALUES
     (1, '다이아몬드', '광물',  50000, 'assets/diamond.png',  FALSE),
