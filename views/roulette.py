@@ -89,7 +89,12 @@ class RouletteView(ft.Column):
         self.is_spinning = False
 
         self._all_teams = get_all_teams()
-        self._team_names = [t["name"] for t in self._all_teams]
+        # 룰렛 릴 애니메이션에는 생존팀(잔액 > 0)만 표시
+        self._team_names = [
+            t["name"] for t in self._all_teams if t["current_balance"] > 0
+        ]
+        if not self._team_names:  # 혹시 모두 파산한 경우 방어
+            self._team_names = [t["name"] for t in self._all_teams]
         self._amount_labels = [format_won_man(a) for a in _AMOUNTS]
 
         self.team_reel = _ReelDisplay(300)
@@ -333,6 +338,12 @@ class RouletteView(ft.Column):
     async def _on_spin_click(self, e):
         if self.is_spinning:
             return
+
+        # 스핀 전에 생존팀 목록 갱신 (파산팀 제외)
+        all_teams = self.get_all_teams()
+        self._team_names = [t["name"] for t in all_teams if t["current_balance"] > 0]
+        if not self._team_names:
+            self._team_names = [t["name"] for t in all_teams]
 
         try:
             result = self.svc.execute_spin(self.current_team_id)

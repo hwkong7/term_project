@@ -220,7 +220,11 @@ class RouletteService:
         if spinner["current_balance"] < SPIN_COST:
             raise RouletteError("룰렛 비용(₩100,000)이 부족합니다.")
 
-        team_ids = teams["id"].tolist()
+        # 파산하지 않은 팀(잔액 > 0)만 룰렛 대상으로 선택
+        alive_teams = teams[teams["current_balance"] > 0]
+        if len(alive_teams) < 1:
+            raise RouletteError("생존 팀이 없습니다.")
+        team_ids = alive_teams["id"].tolist()
         target_team_id = int(self.rng.choice(team_ids))
         penalty_amount = self.rng.choice(PENALTY_AMOUNTS)
 
