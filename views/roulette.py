@@ -76,6 +76,7 @@ class RouletteView(ft.Column):
         get_all_teams,
         on_back,
         on_bankrupt: Callable = None,
+        on_winner: Callable = None,
     ):
         super().__init__(spacing=12, scroll=ft.ScrollMode.AUTO, expand=True)
         self.svc = roulette_service
@@ -84,6 +85,7 @@ class RouletteView(ft.Column):
         self.get_all_teams = get_all_teams
         self.on_back = on_back
         self.on_bankrupt = on_bankrupt
+        self.on_winner = on_winner
         self.is_spinning = False
 
         self._all_teams = get_all_teams()
@@ -106,6 +108,7 @@ class RouletteView(ft.Column):
 
     def _build_header(self):
         team = self.get_team_info(self.current_team_id)
+
         return ft.Container(
             content=ft.Row(
                 [
@@ -325,6 +328,12 @@ class RouletteView(ft.Column):
     async def _on_spin_click(self, e):
         if self.is_spinning:
             return
+
+        # 스핀 전에 생존팀 목록 갱신 (파산팀 제외)
+        all_teams = self.get_all_teams()
+        self._team_names = [t["name"] for t in all_teams if t["current_balance"] > 0]
+        if not self._team_names:
+            self._team_names = [t["name"] for t in all_teams]
 
         try:
             result = self.svc.execute_spin(self.current_team_id)
