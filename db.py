@@ -53,7 +53,6 @@ CREATE TABLE IF NOT EXISTS item (
     price INTEGER NOT NULL CHECK (price >= 0),
     image_path VARCHAR,
     is_new BOOLEAN NOT NULL DEFAULT FALSE,
-    is_custom BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (category_name) REFERENCES category (name)
 );
 
@@ -92,8 +91,7 @@ INSERT INTO team_color (code, hex_value) VALUES
 INSERT INTO category (name) VALUES ('광물'), ('식량');
 
 INSERT INTO system_image (key, image_path, description) VALUES
-    ('BANKRUPT', 'assets/bankrupt.png', '파산 알림 이미지'),
-    ('WINNER',   'assets/winner.png',   '우승 알림 이미지');
+    ('BANKRUPT', 'assets/bankrupt.png', '파산 알림 이미지');
 
 INSERT INTO item (id, name, category_name, price, image_path, is_new) VALUES
     (1, '다이아몬드', '광물',  50000, 'assets/diamond.png',  FALSE),
@@ -101,9 +99,9 @@ INSERT INTO item (id, name, category_name, price, image_path, is_new) VALUES
     (3, '에메랄드',   '광물', 100000, 'assets/emerald.png',  FALSE),
     (4, '금괴',       '광물',  30000, 'assets/gold.png',     FALSE),
     (5, '수박',       '식량',   2000, 'assets/melon.png',    FALSE),
-    (6, '호박파이',   '식량',  32000, 'assets/pie.png',      TRUE),
+    (6, '호박파이',   '식량',  32000, 'assets/pie.png',      FALSE),
     (7, '감자',       '식량',   1000, 'assets/potato.png',   FALSE),
-    (8, '황금사과',   '식량',  50000, 'assets/gapple.png',   TRUE);
+    (8, '황금사과',   '식량',  50000, 'assets/gapple.png',   FALSE);
 """
 
 
@@ -138,14 +136,6 @@ class Database:
             print("[DB] 스키마 및 마스터 데이터 초기화 완료")
         else:
             print("[DB] 기존 DB 연결")
-
-        # 마이그레이션: is_custom 컬럼이 없으면 추가
-        try:
-            self.conn.execute("SELECT is_custom FROM item LIMIT 0")
-        except Exception:
-            self.conn.execute(
-                "ALTER TABLE item ADD COLUMN is_custom BOOLEAN DEFAULT FALSE"
-            )
 
     def reset_game_data(self):
         self.conn.execute("DELETE FROM roulette_spin")

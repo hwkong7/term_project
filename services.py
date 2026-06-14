@@ -123,8 +123,8 @@ class ItemService:
             raise ValueError(f"존재하지 않는 카테고리: {category_name}")
         return self.item_repo.save_one(name.strip(), category_name, price, image_path)
 
-    def find_custom_items(self) -> pd.DataFrame:
-        return self.item_repo.find_custom_items()
+    def find_new_items(self) -> pd.DataFrame:
+        return self.item_repo.find_new_items()
 
 
 # ============================================================
@@ -220,7 +220,7 @@ class RouletteService:
         if spinner["current_balance"] < SPIN_COST:
             raise RouletteError("룰렛 비용(₩100,000)이 부족합니다.")
 
-        # 파산하지 않은 팀(잔액 > 0)만 룰렛 대상으로 선택
+        # 파산팀(잔액 <= 0) 제외 — 생존팀만 룰렛 대상으로 선정
         alive_teams = teams[teams["current_balance"] > 0]
         if len(alive_teams) < 1:
             raise RouletteError("생존 팀이 없습니다.")

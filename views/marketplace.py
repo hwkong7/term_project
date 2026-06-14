@@ -355,7 +355,7 @@ class MarketplaceView(ft.Column):
         )
 
         # 커스텀 아이템 목록
-        custom_items = self.item_service.find_custom_items()
+        custom_items = self.item_service.find_new_items()
         if len(custom_items) == 0:
             items_section_content = ft.Text(
                 "추가된 커스텀 아이템이 없습니다.", size=13, color=TEXT_MUTED
