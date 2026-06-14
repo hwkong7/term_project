@@ -76,7 +76,6 @@ class RouletteView(ft.Column):
         get_all_teams,
         on_back,
         on_bankrupt: Callable = None,
-        on_winner: Callable = None,
     ):
         super().__init__(spacing=12, scroll=ft.ScrollMode.AUTO, expand=True)
         self.svc = roulette_service
@@ -85,16 +84,10 @@ class RouletteView(ft.Column):
         self.get_all_teams = get_all_teams
         self.on_back = on_back
         self.on_bankrupt = on_bankrupt
-        self.on_winner = on_winner
         self.is_spinning = False
 
         self._all_teams = get_all_teams()
-        # 룰렛 릴 애니메이션에는 생존팀(잔액 > 0)만 표시
-        self._team_names = [
-            t["name"] for t in self._all_teams if t["current_balance"] > 0
-        ]
-        if not self._team_names:  # 혹시 모두 파산한 경우 방어
-            self._team_names = [t["name"] for t in self._all_teams]
+        self._team_names = [t["name"] for t in self._all_teams]
         self._amount_labels = [format_won_man(a) for a in _AMOUNTS]
 
         self.team_reel = _ReelDisplay(300)
@@ -113,12 +106,6 @@ class RouletteView(ft.Column):
 
     def _build_header(self):
         team = self.get_team_info(self.current_team_id)
-        # 팀이 파산하거나 조회 실패 시 None 방어 처리
-        team_color = (
-            TEAM_COLORS.get(team["color_code"], "#888888") if team else "#888888"
-        )
-        team_name = team["name"] if team else "-"
-        team_bal = format_won(int(team["current_balance"])) if team else "₩0"
         return ft.Container(
             content=ft.Row(
                 [
@@ -154,19 +141,19 @@ class RouletteView(ft.Column):
                                     content=ft.Text(":)", size=14, color=TEXT_DARK),
                                     width=28,
                                     height=28,
-                                    bgcolor=team_color,
+                                    bgcolor=TEAM_COLORS[team["color_code"]],
                                     border=ft.Border.all(2, TEXT_DARK),
                                     alignment=ft.Alignment.CENTER,
                                 ),
                                 ft.Text(
-                                    f"{team_name}팀",
+                                    f"{team['name']}팀",
                                     color=TEXT_LIGHT,
                                     size=14,
                                     weight=ft.FontWeight.W_500,
                                 ),
                                 ft.Text("잔액", color=TEXT_MUTED, size=12),
                                 ft.Text(
-                                    team_bal,
+                                    format_won(int(team["current_balance"])),
                                     color=TEXT_GOLD,
                                     size=15,
                                     weight=ft.FontWeight.W_500,
@@ -339,12 +326,6 @@ class RouletteView(ft.Column):
         if self.is_spinning:
             return
 
-        # 스핀 전에 생존팀 목록 갱신 (파산팀 제외)
-        all_teams = self.get_all_teams()
-        self._team_names = [t["name"] for t in all_teams if t["current_balance"] > 0]
-        if not self._team_names:
-            self._team_names = [t["name"] for t in all_teams]
-
         try:
             result = self.svc.execute_spin(self.current_team_id)
         except RouletteError as ex:
@@ -443,14 +424,18 @@ class RouletteView(ft.Column):
             ACCENT_RED,
         )
 
-        # 파산 체크
+        # 파산 체크 → 파산 다이얼로그 확인 후 우승 판정
         target_team = self.get_team_info(result["target_team_id"])
         if target_team and target_team["current_balance"] <= 0 and self.on_bankrupt:
             await asyncio.sleep(0.8)
             self.on_bankrupt(target_team["name"])
+            # 파산 다이얼로그가 닫힌 후 우승 판정
+            # (on_bankrupt 콜백은 동기 함수이므로 다이얼로그 열린 뒤 즉시 반환됨)
+            # 사용자가 확인 버튼 누를 시간 확보
+            await asyncio.sleep(0.5)
 
         # 우승 판정: 생존팀(잔액 > 0)이 1팀만 남으면 우승
-        await asyncio.sleep(0.3)
+        # 파산 다이얼로그 이후에 실행되어 올바른 순서 보장
         all_teams = self.get_all_teams()
         surviving = [t for t in all_teams if t["current_balance"] > 0]
         if len(surviving) == 1 and self.on_winner:

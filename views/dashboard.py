@@ -211,8 +211,28 @@ class DashboardView(ft.Column):
         else:
             delta_text = ft.Text("─ 변동 없음", size=11, color=TEXT_MUTED)
 
+        is_bankrupt = int(t["current_balance"]) <= 0
+
         hp_section = []
-        if imminent:
+        if is_bankrupt:
+            # 잔액 0원 이하 → 파산 처리된 팀
+            hp_section = [
+                ft.Text(
+                    "💀 파산", size=11, color=ACCENT_RED, weight=ft.FontWeight.W_500
+                ),
+                ft.Row(
+                    [
+                        ft.Container(width=2, height=12, bgcolor=ACCENT_RED),
+                        ft.Container(
+                            width=max(140 - 2, 2), height=12, bgcolor="#5A3F1F"
+                        ),
+                    ],
+                    spacing=0,
+                ),
+                ft.Text("HP 0%", size=10, color=TEXT_MUTED),
+            ]
+        elif imminent:
+            # 잔액 > 0 but HP < 30% → 파산 임박
             hp_section = [
                 ft.Text(
                     "▼ 파산임박!", size=11, color=ACCENT_RED, weight=ft.FontWeight.W_500
