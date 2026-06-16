@@ -1,13 +1,17 @@
 """
-services.py
-비즈니스 로직 계층 (3.1~3.5 유스케이스 + 대시보드 집계).
+service/finance_service.py
+비즈니스 로직 계층.
+
+기존 services.py의 모든 서비스 클래스를 그대로 유지하되,
+import 경로만 repository 패키지로 변경했다.
+views/*.py 코드는 수정 없이 그대로 동작한다.
 """
 
 import random
 from typing import List, Optional
 import pandas as pd
 
-from repositories import (
+from repository.interfaces import (
     ITeamRepository,
     ITeamColorRepository,
     IItemRepository,
@@ -35,27 +39,23 @@ class TeamService:
         valid_colors = self.color_repo.find_all()["code"].tolist()
         for t in teams_data:
             if t["color_code"] not in valid_colors:
-                raise TeamRegistrationError(
-                    f"유효하지 않은 색상 코드: {t['color_code']}"
-                )
+                raise TeamRegistrationError(f"유효하지 않은 색상 코드: {t['color_code']}")
         self._validate_no_duplicates(teams_data)
 
         if len(self.team_repo.find_all()) > 0:
             self.team_repo.delete_all()
 
-        df = pd.DataFrame(
-            [
-                {
-                    "name": t["name"],
-                    "color_code": t["color_code"],
-                    "slogan": t.get("slogan", ""),
-                    "icon_path": t.get("icon_path"),
-                    "initial_balance": t["initial_balance"],
-                    "current_balance": t["initial_balance"],
-                }
-                for t in teams_data
-            ]
-        )
+        df = pd.DataFrame([
+            {
+                "name": t["name"],
+                "color_code": t["color_code"],
+                "slogan": t.get("slogan", ""),
+                "icon_path": t.get("icon_path"),
+                "initial_balance": t["initial_balance"],
+                "current_balance": t["initial_balance"],
+            }
+            for t in teams_data
+        ])
         self.team_repo.save(df)
         return self.team_repo.find_all()
 
@@ -74,9 +74,7 @@ class TeamService:
             except (TypeError, ValueError):
                 raise TeamRegistrationError(f"팀 {i}의 초기 잔액이 숫자가 아닙니다.")
             if balance < 1:
-                raise TeamRegistrationError(
-                    f"팀 {i}의 초기 잔액은 1원 이상이어야 합니다."
-                )
+                raise TeamRegistrationError(f"팀 {i}의 초기 잔액은 1원 이상이어야 합니다.")
 
     def _validate_no_duplicates(self, teams_data: List[dict]):
         names = [t["name"].strip() for t in teams_data]
@@ -99,7 +97,7 @@ class TeamService:
 class ItemService:
     def __init__(self, item_repo: IItemRepository, category_repo: ICategoryRepository):
         self.item_repo = item_repo
-        self.category_repo = category_repo
+        self.category_repo = category_repo  # views/marketplace.py에서 직접 접근
 
     def find_items(self, category_filter: Optional[str] = None) -> pd.DataFrame:
         if category_filter is None or category_filter == "전체":
@@ -111,9 +109,7 @@ class ItemService:
     def find_by_id(self, item_id: int) -> Optional[dict]:
         return self.item_repo.find_by_id(item_id)
 
-    def add_custom_item(
-        self, name: str, category_name: str, price: int, image_path: Optional[str]
-    ) -> int:
+    def add_custom_item(self, name: str, category_name: str, price: int, image_path: Optional[str]) -> int:
         if not name.strip():
             raise ValueError("아이템 이름이 비어 있습니다.")
         if price < 0:
@@ -135,12 +131,7 @@ class TradeError(Exception):
 
 
 class TradeService:
-    def __init__(
-        self,
-        item_repo: IItemRepository,
-        trade_repo: ITradeRepository,
-        team_repo: ITeamRepository,
-    ):
+    def __init__(self, item_repo: IItemRepository, trade_repo: ITradeRepository, team_repo: ITeamRepository):
         self.item_repo = item_repo
         self.trade_repo = trade_repo
         self.team_repo = team_repo
@@ -152,28 +143,17 @@ class TradeService:
         if item is None:
             raise TradeError(f"존재하지 않는 아이템: id={item_id}")
         unit_price = int(item["price"])
-
-        trade_df = pd.DataFrame(
-            [
-                {
-                    "team_id": team_id,
-                    "item_id": item_id,
-                    "quantity": quantity,
-                    "unit_price": unit_price,
-                }
-            ]
-        )
+        trade_df = pd.DataFrame([{
+            "team_id": team_id, "item_id": item_id,
+            "quantity": quantity, "unit_price": unit_price,
+        }])
         trade_id = self.trade_repo.save(trade_df)
-
         total = quantity * unit_price
         updated_team = self.team_repo.add_balance(team_id, total)
         return {
-            "trade_id": trade_id,
-            "item_name": item["name"],
-            "quantity": quantity,
-            "unit_price": unit_price,
-            "total_amount": total,
-            "team": updated_team,
+            "trade_id": trade_id, "item_name": item["name"],
+            "quantity": quantity, "unit_price": unit_price,
+            "total_amount": total, "team": updated_team,
         }
 
     def count_all_trades(self) -> int:
@@ -188,24 +168,11 @@ class RouletteError(Exception):
 
 
 SPIN_COST = 100_000
-PENALTY_AMOUNTS = [
-    500_000,
-    800_000,
-    1_000_000,
-    1_500_000,
-    2_000_000,
-    2_500_000,
-    3_000_000,
-]
+PENALTY_AMOUNTS = [500_000, 800_000, 1_000_000, 1_500_000, 2_000_000, 2_500_000, 3_000_000]
 
 
 class RouletteService:
-    def __init__(
-        self,
-        roulette_repo: IRouletteRepository,
-        team_repo: ITeamRepository,
-        rng: random.Random = None,
-    ):
+    def __init__(self, roulette_repo: IRouletteRepository, team_repo: ITeamRepository, rng: random.Random = None):
         self.roulette_repo = roulette_repo
         self.team_repo = team_repo
         self.rng = rng or random.Random()
@@ -220,7 +187,6 @@ class RouletteService:
         if spinner["current_balance"] < SPIN_COST:
             raise RouletteError("룰렛 비용(₩100,000)이 부족합니다.")
 
-        # 파산팀(잔액 <= 0) 제외 — 생존팀만 룰렛 대상으로 선정
         alive_teams = teams[teams["current_balance"] > 0]
         if len(alive_teams) < 1:
             raise RouletteError("생존 팀이 없습니다.")
@@ -228,21 +194,15 @@ class RouletteService:
         target_team_id = int(self.rng.choice(team_ids))
         penalty_amount = self.rng.choice(PENALTY_AMOUNTS)
 
-        spin_df = pd.DataFrame(
-            [
-                {
-                    "spinner_team_id": spinner_team_id,
-                    "target_team_id": target_team_id,
-                    "penalty_amount": penalty_amount,
-                    "spin_cost": SPIN_COST,
-                }
-            ]
-        )
+        spin_df = pd.DataFrame([{
+            "spinner_team_id": spinner_team_id,
+            "target_team_id": target_team_id,
+            "penalty_amount": penalty_amount,
+            "spin_cost": SPIN_COST,
+        }])
         spin_id = self.roulette_repo.save(spin_df)
-
         self.team_repo.subtract_balance(spinner_team_id, SPIN_COST)
         updated_target = self.team_repo.subtract_balance(target_team_id, penalty_amount)
-
         return {
             "spin_id": spin_id,
             "spinner_team_id": spinner_team_id,
@@ -269,13 +229,9 @@ class HistoryService:
 
     def get_team_history(self, team_id: int, event_type: str = "전체") -> pd.DataFrame:
         if event_type == "판매만":
-            return self.history_repo.find_integrated_history_by_team_and_type(
-                team_id, "TRADE"
-            )
+            return self.history_repo.find_integrated_history_by_team_and_type(team_id, "TRADE")
         if event_type == "룰렛만":
-            return self.history_repo.find_integrated_history_by_team_and_type(
-                team_id, "ROULETTE"
-            )
+            return self.history_repo.find_integrated_history_by_team_and_type(team_id, "ROULETTE")
         return self.history_repo.find_integrated_history_by_team(team_id)
 
 
@@ -283,12 +239,7 @@ class HistoryService:
 # 4.6 DashboardService
 # ============================================================
 class DashboardService:
-    def __init__(
-        self,
-        team_repo: ITeamRepository,
-        trade_repo: ITradeRepository,
-        roulette_repo: IRouletteRepository,
-    ):
+    def __init__(self, team_repo: ITeamRepository, trade_repo: ITradeRepository, roulette_repo: IRouletteRepository):
         self.team_repo = team_repo
         self.trade_repo = trade_repo
         self.roulette_repo = roulette_repo
@@ -311,3 +262,41 @@ class DashboardService:
         teams["is_bankrupt_imminent"] = teams["hp_percent"] < 30
         teams["is_bankrupt"] = teams["current_balance"] <= 0
         return teams
+
+
+# ============================================================
+# FinanceService — main.py AppContainer용 통합 래퍼
+# ============================================================
+class FinanceService:
+    """
+    main.py AppContainer에서 DB 초기화 및 reset_game_data를 담당.
+    각 서비스는 기존처럼 개별 클래스로 유지한다.
+    """
+
+    def __init__(self, db_manager):
+        self._con = db_manager.get_connection()
+
+    def initialize(self) -> None:
+        """테이블 생성 + 마스터 데이터 INSERT (기존 db.py 역할)"""
+        from db_init import SCHEMA_DDL, MASTER_DATA_SQL
+        result = self._con.execute("""
+            SELECT COUNT(*) FROM information_schema.tables
+            WHERE table_name = 'team_color'
+        """).fetchone()
+        is_first_run = result[0] == 0
+        self._con.execute(SCHEMA_DDL)
+        if is_first_run:
+            self._con.execute(MASTER_DATA_SQL)
+            print("[DB] 스키마 및 마스터 데이터 초기화 완료")
+        else:
+            print("[DB] 기존 DB 연결")
+
+    def reset_game_data(self) -> None:
+        """게임 데이터 초기화 (기존 db.reset_game_data() 역할)"""
+        self._con.execute("DELETE FROM roulette_spin")
+        self._con.execute("DELETE FROM trade")
+        self._con.execute("DELETE FROM team")
+        for seq in ("seq_team_id", "seq_trade_id", "seq_roulette_id"):
+            self._con.execute(f"DROP SEQUENCE IF EXISTS {seq}")
+            self._con.execute(f"CREATE SEQUENCE {seq} START 1")
+        print("[DB] 게임 데이터 초기화 완료")

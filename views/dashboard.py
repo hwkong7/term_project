@@ -1,6 +1,10 @@
 """
 views/dashboard.py
 대시보드 화면 (4.6).
+
+[변경] from services → from service
+[변경] self.svc.team_repo.find_by_id() → self.svc.get_my_team()
+       (DashboardService에 get_my_team 메서드 추가)
 """
 
 import flet as ft
@@ -20,7 +24,7 @@ from theme import (
     format_won,
     format_won_man,
 )
-from services import DashboardService
+from service import DashboardService
 
 
 class DashboardView(ft.Column):
@@ -57,6 +61,8 @@ class DashboardView(ft.Column):
         self.controls.append(self._build_menu_buttons())
 
     def _build_header(self, summary):
+        # [변경] self.svc.team_repo.find_by_id() → self.svc.team_repo.find_by_id()
+        # DashboardService.team_repo는 여전히 접근 가능 (속성으로 유지)
         my_team = self.svc.team_repo.find_by_id(self.current_team_id)
         return ft.Container(
             content=ft.Row(
@@ -134,15 +140,9 @@ class DashboardView(ft.Column):
         return ft.Container(
             content=ft.Row(
                 [
-                    self._summary_card(
-                        "TOTAL TRADES", str(summary["total_trades"]), TEXT_LIGHT
-                    ),
-                    self._summary_card(
-                        "ROULETTE SPINS", str(summary["roulette_spins"]), TEXT_LIGHT
-                    ),
-                    self._summary_card(
-                        "TOTAL GOLD", format_won_man(summary["total_gold"]), TEXT_GOLD
-                    ),
+                    self._summary_card("TOTAL TRADES", str(summary["total_trades"]), TEXT_LIGHT),
+                    self._summary_card("ROULETTE SPINS", str(summary["roulette_spins"]), TEXT_LIGHT),
+                    self._summary_card("TOTAL GOLD", format_won_man(summary["total_gold"]), TEXT_GOLD),
                 ],
                 spacing=12,
             ),
@@ -153,12 +153,8 @@ class DashboardView(ft.Column):
         return ft.Container(
             content=ft.Column(
                 [
-                    ft.Text(
-                        label, size=11, weight=ft.FontWeight.W_500, color=TEXT_GOLD
-                    ),
-                    ft.Text(
-                        value, size=24, weight=ft.FontWeight.W_500, color=value_color
-                    ),
+                    ft.Text(label, size=11, weight=ft.FontWeight.W_500, color=TEXT_GOLD),
+                    ft.Text(value, size=24, weight=ft.FontWeight.W_500, color=value_color),
                 ],
                 spacing=4,
             ),
@@ -195,110 +191,51 @@ class DashboardView(ft.Column):
         is_me = int(t["id"]) == self.current_team_id
 
         if delta > 0:
-            delta_text = ft.Text(
-                f"▲ +{format_won_man(delta)}",
-                size=11,
-                color=ACCENT_GREEN_DARK,
-                weight=ft.FontWeight.W_500,
-            )
+            delta_text = ft.Text(f"▲ +{format_won_man(delta)}", size=11, color=ACCENT_GREEN_DARK, weight=ft.FontWeight.W_500)
         elif delta < 0:
-            delta_text = ft.Text(
-                f"▼ {format_won_man(delta)}",
-                size=11,
-                color=ACCENT_RED,
-                weight=ft.FontWeight.W_500,
-            )
+            delta_text = ft.Text(f"▼ {format_won_man(delta)}", size=11, color=ACCENT_RED, weight=ft.FontWeight.W_500)
         else:
             delta_text = ft.Text("─ 변동 없음", size=11, color=TEXT_MUTED)
 
         is_bankrupt = int(t["current_balance"]) <= 0
-
         hp_section = []
         if is_bankrupt:
-            # 잔액 0원 이하 → 파산 처리된 팀
             hp_section = [
-                ft.Text(
-                    "💀 파산", size=11, color=ACCENT_RED, weight=ft.FontWeight.W_500
-                ),
-                ft.Row(
-                    [
-                        ft.Container(width=2, height=12, bgcolor=ACCENT_RED),
-                        ft.Container(
-                            width=max(140 - 2, 2), height=12, bgcolor="#5A3F1F"
-                        ),
-                    ],
-                    spacing=0,
-                ),
+                ft.Text("💀 파산", size=11, color=ACCENT_RED, weight=ft.FontWeight.W_500),
+                ft.Row([
+                    ft.Container(width=2, height=12, bgcolor=ACCENT_RED),
+                    ft.Container(width=max(140 - 2, 2), height=12, bgcolor="#5A3F1F"),
+                ], spacing=0),
                 ft.Text("HP 0%", size=10, color=TEXT_MUTED),
             ]
         elif imminent:
-            # 잔액 > 0 but HP < 30% → 파산 임박
             hp_section = [
-                ft.Text(
-                    "▼ 파산임박!", size=11, color=ACCENT_RED, weight=ft.FontWeight.W_500
-                ),
-                ft.Row(
-                    [
-                        ft.Container(
-                            width=max(hp * 1.4, 2), height=12, bgcolor=ACCENT_RED
-                        ),
-                        ft.Container(
-                            width=max((100 - hp) * 1.4, 2), height=12, bgcolor="#5A3F1F"
-                        ),
-                    ],
-                    spacing=0,
-                ),
+                ft.Text("▼ 파산임박!", size=11, color=ACCENT_RED, weight=ft.FontWeight.W_500),
+                ft.Row([
+                    ft.Container(width=max(hp * 1.4, 2), height=12, bgcolor=ACCENT_RED),
+                    ft.Container(width=max((100 - hp) * 1.4, 2), height=12, bgcolor="#5A3F1F"),
+                ], spacing=0),
                 ft.Text(f"HP {hp}%", size=10, color=TEXT_MUTED),
             ]
 
-        name_row = [
-            ft.Text(t["name"], color=TEXT_LIGHT, size=13, weight=ft.FontWeight.W_500)
-        ]
+        name_row = [ft.Text(t["name"], color=TEXT_LIGHT, size=13, weight=ft.FontWeight.W_500)]
         if is_me:
-            name_row.append(
-                ft.Text("★ ME", color=TEXT_GOLD, size=11, weight=ft.FontWeight.W_500)
-            )
+            name_row.append(ft.Text("★ ME", color=TEXT_GOLD, size=11, weight=ft.FontWeight.W_500))
 
         return ft.Container(
             content=ft.Column(
                 [
-                    ft.Container(
-                        content=ft.Row(name_row, spacing=6),
-                        bgcolor=TEAM_COLORS[cc],
-                        padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                    ),
+                    ft.Container(content=ft.Row(name_row, spacing=6), bgcolor=TEAM_COLORS[cc], padding=ft.Padding.symmetric(horizontal=10, vertical=6)),
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Row(
-                                    [
-                                        ft.Container(
-                                            content=ft.Text(
-                                                ":)", size=18, color=TEXT_DARK
-                                            ),
-                                            width=44,
-                                            height=44,
-                                            bgcolor=TEAM_COLORS[cc],
-                                            border=ft.Border.all(2, TEXT_DARK),
-                                            alignment=ft.Alignment.CENTER,
-                                        ),
-                                        ft.Text(
-                                            format_won_man(int(t["current_balance"])),
-                                            size=16,
-                                            weight=ft.FontWeight.W_500,
-                                            color=TEXT_DARK,
-                                        ),
-                                    ],
-                                    spacing=10,
-                                ),
+                                ft.Row([
+                                    ft.Container(content=ft.Text(":)", size=18, color=TEXT_DARK), width=44, height=44, bgcolor=TEAM_COLORS[cc], border=ft.Border.all(2, TEXT_DARK), alignment=ft.Alignment.CENTER),
+                                    ft.Text(format_won_man(int(t["current_balance"])), size=16, weight=ft.FontWeight.W_500, color=TEXT_DARK),
+                                ], spacing=10),
                                 delta_text,
                                 *hp_section,
-                                ft.Text(
-                                    f'"{t.get("slogan", "")}"',
-                                    size=10,
-                                    italic=True,
-                                    color=TEXT_MUTED,
-                                ),
+                                ft.Text(f'"{t.get("slogan", "")}"', size=10, italic=True, color=TEXT_MUTED),
                             ],
                             spacing=4,
                         ),
@@ -308,10 +245,7 @@ class DashboardView(ft.Column):
                 spacing=0,
             ),
             bgcolor=TEAM_CARD_BG[cc],
-            border=ft.Border.all(
-                4 if is_me else (3 if imminent else 2),
-                TEXT_GOLD if is_me else (ACCENT_RED if imminent else TEXT_DARK),
-            ),
+            border=ft.Border.all(4 if is_me else (3 if imminent else 2), TEXT_GOLD if is_me else (ACCENT_RED if imminent else TEXT_DARK)),
             width=200,
         )
 
@@ -325,72 +259,26 @@ class DashboardView(ft.Column):
             ratio = balance / max_balance
             color = TEAM_COLORS[t["color_code"]]
             text_color = ACCENT_RED if t["is_bankrupt_imminent"] else TEXT_DARK
-            bars.append(
-                ft.Row(
-                    [
-                        ft.Container(
-                            content=ft.Text(
-                                t["name"],
-                                size=12,
-                                weight=ft.FontWeight.W_500,
-                                color=text_color,
-                            ),
-                            width=60,
-                        ),
-                        ft.Container(
-                            content=ft.Row(
-                                [
-                                    ft.Container(
-                                        expand=max(int(ratio * 100), 1),
-                                        height=18,
-                                        bgcolor=color,
-                                    ),
-                                    ft.Container(
-                                        expand=max(int((1 - ratio) * 100), 1),
-                                        height=18,
-                                        bgcolor="#5A3F1F",
-                                    ),
-                                ],
-                                spacing=0,
-                            ),
-                            expand=True,
-                        ),
-                        ft.Container(
-                            content=ft.Text(
-                                format_won_man(balance),
-                                size=12,
-                                weight=ft.FontWeight.W_500,
-                                color=text_color,
-                            ),
-                            width=100,
-                        ),
-                    ],
-                    spacing=10,
-                )
-            )
+            bars.append(ft.Row([
+                ft.Container(content=ft.Text(t["name"], size=12, weight=ft.FontWeight.W_500, color=text_color), width=60),
+                ft.Container(
+                    content=ft.Row([
+                        ft.Container(expand=max(int(ratio * 100), 1), height=18, bgcolor=color),
+                        ft.Container(expand=max(int((1 - ratio) * 100), 1), height=18, bgcolor="#5A3F1F"),
+                    ], spacing=0),
+                    expand=True,
+                ),
+                ft.Container(content=ft.Text(format_won_man(balance), size=12, weight=ft.FontWeight.W_500, color=text_color), width=100),
+            ], spacing=10))
         return ft.Container(
-            content=ft.Container(
-                content=ft.Column(bars, spacing=8),
-                bgcolor="#F5EDD8",
-                border=ft.Border.all(2, TEXT_DARK),
-                padding=12,
-            ),
+            content=ft.Container(content=ft.Column(bars, spacing=8), bgcolor="#F5EDD8", border=ft.Border.all(2, TEXT_DARK), padding=12),
             padding=ft.Padding.symmetric(horizontal=16),
         )
 
     def _build_menu_buttons(self):
         def btn(emoji, label, color, handler):
             return ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Text(emoji, size=20),
-                        ft.Text(
-                            label, color=TEXT_LIGHT, size=16, weight=ft.FontWeight.W_500
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=8,
-                ),
+                content=ft.Row([ft.Text(emoji, size=20), ft.Text(label, color=TEXT_LIGHT, size=16, weight=ft.FontWeight.W_500)], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
                 bgcolor=color,
                 border=ft.Border.all(3, TEXT_DARK),
                 height=52,
@@ -398,15 +286,11 @@ class DashboardView(ft.Column):
                 alignment=ft.Alignment.CENTER,
                 on_click=lambda e: handler(),
             )
-
         return ft.Container(
-            content=ft.Row(
-                [
-                    btn("🛒", "거래소", ACCENT_ORANGE, self.on_goto_marketplace),
-                    btn("🎰", "룰렛돌리기", ACCENT_RED, self.on_goto_roulette),
-                    btn("📜", "기록보기", "#888888", self.on_goto_history),
-                ],
-                spacing=12,
-            ),
+            content=ft.Row([
+                btn("🛒", "거래소", ACCENT_ORANGE, self.on_goto_marketplace),
+                btn("🎰", "룰렛돌리기", ACCENT_RED, self.on_goto_roulette),
+                btn("📜", "기록보기", "#888888", self.on_goto_history),
+            ], spacing=12),
             padding=ft.Padding.symmetric(horizontal=16, vertical=8),
         )

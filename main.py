@@ -2,24 +2,37 @@
 main.py
 파산게임 시뮬레이터 진입점 + 화면 라우팅.
 
+[변경 내용]
+- 기존: db.py 싱글턴 + repositories.py + services.py
+- 변경: repository/ 패키지(DI) + service/ 패키지
+- 화면 라우팅 로직(show_*, reset_game 등)은 기존과 동일
+
 실행:
     uv run flet run main.py
 """
 
 import flet as ft
 
-from db import db
-from repositories import (
-    DuckDBTeamRepository,
-    DuckDBTeamColorRepository,
-    DuckDBCategoryRepository,
-    DuckDBItemRepository,
-    DuckDBTradeRepository,
-    DuckDBRouletteRepository,
-    DuckDBHistoryQueryRepository,
-    DuckDBSystemImageRepository,
+# =========================================================================
+# [변경] repository 패키지 — DB_TYPE에 맞는 구현체 자동 선택
+# =========================================================================
+from repository import (
+    DatabaseManager,
+    TeamColorRepository,
+    CategoryRepository,
+    ItemRepository,
+    TeamRepository,
+    TradeRepository,
+    RouletteRepository,
+    HistoryQueryRepository,
+    SystemImageRepository,
 )
-from services import (
+
+# =========================================================================
+# [변경] service 패키지 — 기존 services.py와 동일한 클래스명 유지
+# =========================================================================
+from service import (
+    FinanceService,
     TeamService,
     ItemService,
     TradeService,
@@ -27,6 +40,10 @@ from services import (
     HistoryService,
     DashboardService,
 )
+
+# =========================================================================
+# [유지] views, theme은 기존 그대로
+# =========================================================================
 from views import (
     TeamRegistrationView,
     TeamSelectionView,
@@ -42,16 +59,24 @@ from views.dialogs import show_winner_dialog
 
 class AppContainer:
     def __init__(self):
-        conn = db.conn
-        self.team_color_repo = DuckDBTeamColorRepository(conn)
-        self.category_repo = DuckDBCategoryRepository(conn)
-        self.item_repo = DuckDBItemRepository(conn)
-        self.team_repo = DuckDBTeamRepository(conn)
-        self.trade_repo = DuckDBTradeRepository(conn)
-        self.roulette_repo = DuckDBRouletteRepository(conn)
-        self.history_repo = DuckDBHistoryQueryRepository(conn)
-        self.image_repo = DuckDBSystemImageRepository(conn)
+        # .env의 DB_TYPE에 맞는 DB 매니저 자동 선택
+        db_manager = DatabaseManager()
 
+        # 각 Repository에 DB 매니저 주입
+        self.team_color_repo = TeamColorRepository(db_manager)
+        self.category_repo = CategoryRepository(db_manager)
+        self.item_repo = ItemRepository(db_manager)
+        self.team_repo = TeamRepository(db_manager)
+        self.trade_repo = TradeRepository(db_manager)
+        self.roulette_repo = RouletteRepository(db_manager)
+        self.history_repo = HistoryQueryRepository(db_manager)
+        self.image_repo = SystemImageRepository(db_manager)
+
+        # DB 초기화 (테이블 생성 + 마스터 데이터)
+        self._finance = FinanceService(db_manager)
+        self._finance.initialize()
+
+        # 각 Service에 Repository 주입 — 기존 services.py와 동일한 구조
         self.team_service = TeamService(self.team_repo, self.team_color_repo)
         self.item_service = ItemService(self.item_repo, self.category_repo)
         self.trade_service = TradeService(
@@ -62,6 +87,10 @@ class AppContainer:
         self.dashboard_service = DashboardService(
             self.team_repo, self.trade_repo, self.roulette_repo
         )
+
+    def reset_game_data(self):
+        """게임 데이터 초기화 — 기존 db.reset_game_data() 역할"""
+        self._finance.reset_game_data()
 
 
 def main(page: ft.Page):
@@ -102,7 +131,6 @@ def main(page: ft.Page):
             on_new_game=reset_game,
         )
 
-    # 화면 전환
     def show_team_registration():
         page.controls.clear()
         page.add(
@@ -114,7 +142,7 @@ def main(page: ft.Page):
         page.update()
 
     def show_team_selection():
-        state["current_team_id"] = None  # 다시 선택하게
+        state["current_team_id"] = None
         page.controls.clear()
         page.add(
             TeamSelectionView(
@@ -147,7 +175,6 @@ def main(page: ft.Page):
         )
         page.update()
 
-    # ▼ 추가: 파산한 팀이 있으면 알림 (한 번만)
     all_teams = get_all_teams()
     bankrupted = [t for t in all_teams if t["current_balance"] <= 0]
     if bankrupted and "shown_bankrupt" not in state:
@@ -157,7 +184,7 @@ def main(page: ft.Page):
             if t["id"] not in state.get("shown_bankrupt", set()):
                 state.setdefault("shown_bankrupt", set()).add(t["id"])
                 show_bankrupt(t["name"])
-                break  # 한 번에 하나씩만
+                break
 
     def show_marketplace():
         page.controls.clear()
@@ -199,15 +226,14 @@ def main(page: ft.Page):
         )
         page.update()
 
+    # [변경] db.reset_game_data() → container.reset_game_data()
     def reset_game():
-        db.reset_game_data()
+        container.reset_game_data()
         state["current_team_id"] = None
         show_team_registration()
 
-    # 시작 화면 결정
     existing = get_all_teams()
     if existing:
-        # 기존 게임이 있으면 팀 선택부터
         show_team_selection()
     else:
         show_team_registration()

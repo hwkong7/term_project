@@ -1,16 +1,9 @@
 """
-db.py
-DuckDB 연결 관리 및 스키마 초기화.
-설계서 6장 Logical Design의 DDL을 구현한다.
+db_init.py
+DDL 및 마스터 데이터 SQL 상수.
+기존 db.py의 SCHEMA_DDL, MASTER_DATA_SQL을 분리하여
+service/finance_service.py에서 import해 사용한다.
 """
-
-import duckdb
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_DIR = PROJECT_ROOT / "data"
-DB_PATH = str(DATA_DIR / "bankruptcy.duckdb")
-
 
 SCHEMA_DDL = """
 CREATE SEQUENCE IF NOT EXISTS seq_team_id START 1;
@@ -104,48 +97,3 @@ INSERT INTO item (id, name, category_name, price, image_path, is_new) VALUES
     (7, '감자',       '식량',   1000, 'assets/potato.png',   FALSE),
     (8, '황금사과',   '식량',  50000, 'assets/gapple.png',   FALSE);
 """
-
-
-class Database:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self._initialized:
-            return
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        self.conn = duckdb.connect(DB_PATH)
-        self._init_schema_if_needed()
-        self._initialized = True
-
-    def _init_schema_if_needed(self):
-        result = self.conn.execute("""
-            SELECT COUNT(*) FROM information_schema.tables
-            WHERE table_name = 'team_color'
-        """).fetchone()
-        is_first_run = result[0] == 0
-
-        self.conn.execute(SCHEMA_DDL)
-
-        if is_first_run:
-            self.conn.execute(MASTER_DATA_SQL)
-            print("[DB] 스키마 및 마스터 데이터 초기화 완료")
-        else:
-            print("[DB] 기존 DB 연결")
-
-    def reset_game_data(self):
-        self.conn.execute("DELETE FROM roulette_spin")
-        self.conn.execute("DELETE FROM trade")
-        self.conn.execute("DELETE FROM team")
-        for seq in ("seq_team_id", "seq_trade_id", "seq_roulette_id"):
-            self.conn.execute(f"DROP SEQUENCE IF EXISTS {seq}")
-            self.conn.execute(f"CREATE SEQUENCE {seq} START 1")
-        print("[DB] 게임 데이터 초기화 완료")
-
-
-db = Database()
