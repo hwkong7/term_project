@@ -44,7 +44,7 @@ def show_bankrupt_dialog(
 
     def close_dialog(e):
         """'확인' 버튼 클릭 시 다이얼로그를 닫고 on_confirm을 실행한다."""
-        dlg.open = False    # Flet 0.85.x: page.close() 대신 open=False + update()
+        dlg.open = False    # Flet 0.85.x 방식: page.close() 대신 open=False 설정 후 update()
         page.update()
         if on_confirm:
             on_confirm()
@@ -52,11 +52,11 @@ def show_bankrupt_dialog(
     # 이미지 경로가 있으면 ft.Image, 없으면 이모지 텍스트로 폴백
     if bankrupt_image_path:
         image_widget = ft.Image(
-            src=bankrupt_image_path,     # assets/ 기준 상대 경로 (DB에서 조회)
+            src=bankrupt_image_path,     # assets/ 기준 상대 경로 (DB에서 조회한 값)
             width=500,
             height=320,
-            fit=ft.BoxFit.CONTAIN,       # 비율 유지하며 컨테이너에 맞춤
-            error_content=ft.Text(       # 이미지 로드 실패 시 표시할 폴백 텍스트
+            fit=ft.BoxFit.CONTAIN,       # 비율을 유지하며 지정된 박스 안에 맞춤
+            error_content=ft.Text(       # 이미지 파일을 찾지 못하거나 로드 실패 시 표시할 폴백 텍스트
                 "💀 파산당했습니다.. 💀",
                 size=32,
                 weight=ft.FontWeight.BOLD,
@@ -64,7 +64,7 @@ def show_bankrupt_dialog(
             ),
         )
     else:
-        # 이미지 경로 자체가 없을 경우 이모지로 대체
+        # DB에 이미지 경로 자체가 등록되지 않은 경우 — 이모지로 직접 대체
         image_widget = ft.Text(
             "💀 파산당했습니다.. 💀",
             size=32,
@@ -74,12 +74,12 @@ def show_bankrupt_dialog(
 
     # 파산 다이얼로그 정의
     dlg = ft.AlertDialog(
-        modal=True,               # 모달: 다이얼로그 외부 클릭 불가
-        bgcolor="#1A1A1A",        # 어두운 배경으로 심각한 분위기 연출
+        modal=True,               # 모달 — 다이얼로그 바깥을 클릭해도 닫히지 않음 (확인 버튼 필수)
+        bgcolor="#1A1A1A",        # 어두운 배경으로 파산의 무거운 분위기 연출
         content=ft.Container(
             content=ft.Column(
                 [
-                    image_widget,              # 파산 이미지 또는 이모지
+                    image_widget,              # 파산 이미지 또는 이모지 폴백
                     ft.Container(height=12),   # 이미지와 텍스트 사이 여백
                     ft.Text(
                         f"{team_name}팀",
@@ -91,7 +91,7 @@ def show_bankrupt_dialog(
                 ],
                 spacing=4,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                tight=True,   # 컬럼 높이를 내용에 맞게 자동 조절
+                tight=True,   # Column 높이를 내용물에 맞춰 자동으로 줄임
             ),
             width=540,
             padding=20,
@@ -102,15 +102,15 @@ def show_bankrupt_dialog(
                 content=ft.Text(
                     "확인", color=TEXT_DARK, size=16, weight=ft.FontWeight.W_500
                 ),
-                bgcolor=TEAM_COLORS["YELLOW"],        # 노란색 버튼으로 주목도 높임
+                bgcolor=TEAM_COLORS["YELLOW"],        # 노란색 버튼으로 시선을 끌어 주목도 높임
                 border=ft.Border.all(3, TEXT_DARK),
                 padding=ft.Padding.symmetric(horizontal=40, vertical=12),
                 on_click=close_dialog,
             ),
         ],
-        actions_alignment=ft.MainAxisAlignment.CENTER,   # 버튼 중앙 정렬
+        actions_alignment=ft.MainAxisAlignment.CENTER,   # 버튼을 가로 중앙에 배치
     )
-    page.show_dialog(dlg)   # 다이얼로그 표시
+    page.show_dialog(dlg)   # 모달 다이얼로그를 화면에 표시
 
 
 def show_winner_dialog(
@@ -137,19 +137,19 @@ def show_winner_dialog(
 
     def close_dialog(e):
         """'새 게임 시작' 버튼 클릭 시 다이얼로그를 닫고 on_new_game을 실행한다."""
-        dlg.open = False   # Flet 0.85.x: open=False + update()로 닫음
+        dlg.open = False   # Flet 0.85.x 방식: open=False 설정 후 update()로 닫음
         page.update()
         if on_new_game:
-            on_new_game()   # 새 게임 시작 (DB 초기화 → 팀 등록 화면)
+            on_new_game()   # 게임 데이터 초기화 후 팀 등록 화면으로 이동
 
     # 이미지 경로가 있으면 ft.Image, 없으면 이모지 텍스트로 폴백
     if winner_image_path:
         image_widget = ft.Image(
-            src=winner_image_path,   # DB에서 조회한 경로 (assets/winner.png 등)
+            src=winner_image_path,   # DB에서 조회한 경로 (예: assets/winner.png)
             width=500,
             height=320,
-            fit=ft.BoxFit.CONTAIN,   # 비율 유지하며 컨테이너에 맞춤
-            error_content=ft.Text(   # 이미지 로드 실패 시 폴백
+            fit=ft.BoxFit.CONTAIN,   # 비율을 유지하며 지정된 박스 안에 맞춤
+            error_content=ft.Text(   # 이미지 로드 실패 시 표시할 폴백 텍스트
                 "🏆 우승!",
                 size=48,
                 weight=ft.FontWeight.BOLD,
@@ -157,7 +157,7 @@ def show_winner_dialog(
             ),
         )
     else:
-        # 이미지 경로가 None이면 이모지로 대체
+        # DB에 이미지 경로가 등록되지 않은 경우 — 이모지로 직접 대체
         image_widget = ft.Text(
             "🏆 우승!",
             size=48,
@@ -167,13 +167,13 @@ def show_winner_dialog(
 
     # 우승 다이얼로그 정의
     dlg = ft.AlertDialog(
-        modal=True,          # 모달: 다이얼로그 외부 클릭 불가
-        bgcolor="#1A1A1A",   # 어두운 배경
+        modal=True,          # 모달 — 바깥 클릭으로 닫히지 않고 버튼으로만 닫힘
+        bgcolor="#1A1A1A",   # 어두운 배경 위에 황금색 텍스트가 돋보이도록 설계
         content=ft.Container(
             content=ft.Column(
                 [
-                    image_widget,              # 우승 이미지 또는 이모지
-                    ft.Container(height=12),   # 여백
+                    image_widget,              # 우승 이미지 또는 이모지 폴백
+                    ft.Container(height=12),   # 이미지와 텍스트 사이 여백
                     ft.Text(
                         f"🏆 {team_name}팀 우승!",
                         size=24,
@@ -182,7 +182,7 @@ def show_winner_dialog(
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Text(
-                        f"최종 잔액: {format_won(final_balance)}",   # 정확한 금액 표시
+                        f"최종 잔액: {format_won(final_balance)}",   # 만원 단위 축약 없이 정확한 금액 표시
                         size=16,
                         color=TEXT_LIGHT,
                         text_align=ft.TextAlign.CENTER,
@@ -190,24 +190,24 @@ def show_winner_dialog(
                     ft.Text(
                         "모든 팀을 파산시키고 최후의 생존자가 되었습니다!",
                         size=13,
-                        color="#AAAAAA",   # 흐린 회색 — 부가 설명
+                        color="#AAAAAA",   # 흐린 회색 — 메인 텍스트보다 덜 강조되는 부가 설명
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],
                 spacing=8,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                tight=True,
+                tight=True,   # Column 높이를 내용물에 맞춰 자동으로 줄임
             ),
             width=540,
             padding=20,
         ),
         actions=[
-            # '새 게임 시작' 버튼 — 클릭 시 close_dialog → on_new_game(reset_game) 실행
+            # '새 게임 시작' 버튼 — 클릭 시 close_dialog → on_new_game(main.reset_game) 순으로 실행
             ft.Container(
                 content=ft.Text(
                     "새 게임 시작", color=TEXT_DARK, size=16, weight=ft.FontWeight.W_500
                 ),
-                bgcolor=TEXT_GOLD,              # 황금색 버튼으로 우승 분위기 연출
+                bgcolor=TEXT_GOLD,              # 황금색 버튼으로 우승의 영광스러운 분위기 연출
                 border=ft.Border.all(3, TEXT_DARK),
                 padding=ft.Padding.symmetric(horizontal=40, vertical=12),
                 on_click=close_dialog,
@@ -215,4 +215,4 @@ def show_winner_dialog(
         ],
         actions_alignment=ft.MainAxisAlignment.CENTER,
     )
-    page.show_dialog(dlg)   # 다이얼로그 표시
+    page.show_dialog(dlg)   # 모달 다이얼로그를 화면에 표시

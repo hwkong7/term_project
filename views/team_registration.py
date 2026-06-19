@@ -33,12 +33,12 @@ from views._helpers import _snack
 # 팀 등록 화면에서 기본으로 채워지는 6팀 프리셋
 # 파산게임 유튜브 컨텐츠에서 실제로 등장하는 팀 이름을 사용
 DEFAULT_PRESETS = [
-    {"name": "양띵",  "color": "YELLOW", "slogan": "우승하자!"},
-    {"name": "콩콩",  "color": "BLUE",   "slogan": "콩콩이팀"},
-    {"name": "신혜원","color": "PINK",   "slogan": "끝까지간다"},
-    {"name": "악어",  "color": "GREEN",  "slogan": "악어다!"},
-    {"name": "팀5",   "color": "PURPLE", "slogan": "도전!"},
-    {"name": "팀6",   "color": "ORANGE", "slogan": "파이팅!"},
+    {"name": "양띵", "color": "YELLOW", "slogan": "우승하자!"},
+    {"name": "콩콩", "color": "BLUE", "slogan": "콩콩이팀"},
+    {"name": "신혜원", "color": "PINK", "slogan": "끝까지간다"},
+    {"name": "악어", "color": "GREEN", "slogan": "악어다!"},
+    {"name": "팀5", "color": "PURPLE", "slogan": "도전!"},
+    {"name": "팀6", "color": "ORANGE", "slogan": "파이팅!"},
 ]
 
 
@@ -63,8 +63,8 @@ class TeamCard(ft.Container):
             preset         : 기본값 딕셔너리 {'name', 'color', 'slogan'}
             on_color_change: 색상 선택 시 호출되는 콜백 (idx, old_color, new_color)
         """
-        self.index          = index
-        self.selected_color = preset["color"]   # 현재 선택된 색상 코드
+        self.index = index
+        self.selected_color = preset["color"]  # 현재 선택된 색상 코드
         self.on_color_change = on_color_change
 
         # ── 입력 필드 생성 ──
@@ -87,7 +87,7 @@ class TeamCard(ft.Container):
             label_style=ft.TextStyle(color=TEXT_MUTED, size=11),
         )
         self.balance_field = ft.TextField(
-            value=str(DEFAULT_INITIAL_BALANCE),   # 기본값: 1,000만 원
+            value=str(DEFAULT_INITIAL_BALANCE),  # 기본값: 1,000만 원
             label="초기 잔액 (원)",
             text_size=13,
             keyboard_type=ft.KeyboardType.NUMBER,  # 숫자 키보드
@@ -105,11 +105,13 @@ class TeamCard(ft.Container):
             content=ft.Text(
                 f"팀 {index + 1}", size=14, weight=ft.FontWeight.W_500, color=TEXT_LIGHT
             ),
-            bgcolor=TEAM_COLORS[self.selected_color],   # 선택된 팀 색상으로 배경 설정
+            bgcolor=TEAM_COLORS[self.selected_color],  # 선택된 팀 색상으로 배경 설정
             padding=ft.Padding.symmetric(horizontal=12, vertical=8),
         )
 
         # ── 부모 Container 초기화 ──
+        # 이 클래스 자체가 ft.Container이므로 __init__ 마지막에 super().__init__()으로
+        # 카드 전체 레이아웃(헤더 + 입력 폼)을 구성한다
         super().__init__(
             content=ft.Column(
                 [
@@ -125,7 +127,7 @@ class TeamCard(ft.Container):
                                     weight=ft.FontWeight.W_500,
                                     color=TEXT_MUTED,
                                 ),
-                                self.color_buttons_row,   # 6개 색상 선택 버튼
+                                self.color_buttons_row,  # 6개 색상 선택 버튼
                                 self.balance_field,
                             ],
                             spacing=10,
@@ -135,7 +137,7 @@ class TeamCard(ft.Container):
                 ],
                 spacing=0,
             ),
-            bgcolor=TEAM_CARD_BG[self.selected_color],   # 카드 배경: 팀 색상의 연한 버전
+            bgcolor=TEAM_CARD_BG[self.selected_color],  # 카드 배경: 팀 색상의 연한 버전
             border=ft.Border.all(2, TEXT_DARK),
             border_radius=4,
             width=240,
@@ -152,10 +154,12 @@ class TeamCard(ft.Container):
             buttons.append(
                 ft.Container(
                     content=ft.Container(width=24, height=24, bgcolor=hex_val),
-                    border=ft.Border.all(3 if sel else 1, TEXT_DARK),   # 선택된 색상: 두꺼운 테두리
+                    border=ft.Border.all(
+                        3 if sel else 1, TEXT_DARK
+                    ),  # 선택된 색상: 두꺼운 테두리
                     padding=2,
-                    tooltip=TEAM_COLOR_LABELS[code],   # 마우스 오버 시 한글 색상명 표시
-                    data=code,                         # 버튼에 색상 코드를 data로 저장
+                    tooltip=TEAM_COLOR_LABELS[code],  # 마우스 오버 시 한글 색상명 표시
+                    data=code,  # 버튼에 색상 코드를 data로 저장
                     on_click=self._on_color_click,
                 )
             )
@@ -167,7 +171,7 @@ class TeamCard(ft.Container):
         1. 현재 카드의 선택 색상을 업데이트하고 헤더·배경색을 변경한다.
         2. on_color_change 콜백으로 다른 카드에 색상 중복 교환을 요청한다.
         """
-        new_c = e.control.data   # 클릭된 버튼의 색상 코드
+        new_c = e.control.data  # 클릭된 버튼의 색상 코드
         old_c = self.selected_color
 
         # 선택된 색상 코드 갱신
@@ -186,7 +190,7 @@ class TeamCard(ft.Container):
         # 다른 카드와의 색상 중복 교환 요청
         self.on_color_change(self.index, old_c, new_c)
 
-        self.update()   # UI 갱신
+        self.update()  # UI 갱신
 
     def to_dict(self):
         """
@@ -197,12 +201,12 @@ class TeamCard(ft.Container):
         try:
             balance = int(self.balance_field.value or 0)
         except ValueError:
-            balance = 0   # 숫자가 아닌 문자열이 입력된 경우 0으로 처리
+            balance = 0  # 숫자가 아닌 문자열이 입력된 경우 0으로 처리
         return {
-            "name":            (self.name_field.value   or "").strip(),
-            "color_code":      self.selected_color,
-            "slogan":          (self.slogan_field.value or "").strip(),
-            "icon_path":       None,    # 아이콘 이미지 경로 (현재 미구현)
+            "name": (self.name_field.value or "").strip(),
+            "color_code": self.selected_color,
+            "slogan": (self.slogan_field.value or "").strip(),
+            "icon_path": None,  # 아이콘 이미지 경로 (현재 미구현)
             "initial_balance": balance,
         }
 
@@ -225,10 +229,10 @@ class TeamRegistrationView(ft.Column):
             on_register_success : 등록 성공 시 호출되는 콜백 (→ 팀 선택 화면)
         """
         super().__init__(spacing=16, scroll=ft.ScrollMode.AUTO, expand=True)
-        self.team_service        = team_service
+        self.team_service = team_service
         self.on_register_success = on_register_success
-        self.team_count          = 4                # 기본 참여 팀 수: 4팀
-        self.team_cards: List[TeamCard] = []        # 현재 표시 중인 TeamCard 목록
+        self.team_count = 4  # 기본 참여 팀 수: 4팀
+        self.team_cards: List[TeamCard] = []  # 현재 표시 중인 TeamCard 목록
         self._build()
 
     def _build(self):
@@ -288,17 +292,19 @@ class TeamRegistrationView(ft.Column):
             buttons.append(
                 ft.Container(
                     content=ft.Text(
-                        f"{n}팀{'  ✓' if sel else ''}",   # 선택된 팀 수에는 ✓ 표시
+                        f"{n}팀{'  ✓' if sel else ''}",  # 선택된 팀 수에는 ✓ 표시
                         color=TEXT_LIGHT,
                         size=14,
                         weight=ft.FontWeight.W_500,
                     ),
-                    bgcolor=BG_BUTTON if sel else "#9A9A9A",   # 선택: 활성색 / 미선택: 회색
+                    bgcolor=BG_BUTTON
+                    if sel
+                    else "#9A9A9A",  # 선택: 활성색 / 미선택: 회색
                     border=ft.Border.all(2, TEXT_DARK),
                     width=85,
                     height=36,
                     alignment=ft.Alignment.CENTER,
-                    data=n,                         # 버튼에 팀 수를 data로 저장
+                    data=n,  # 버튼에 팀 수를 data로 저장
                     on_click=self._on_team_count_click,
                 )
             )
@@ -307,7 +313,9 @@ class TeamRegistrationView(ft.Column):
                 [
                     ft.Row(
                         [
-                            ft.Container(width=4, height=20, bgcolor=TEXT_DARK),   # 왼쪽 강조 바
+                            ft.Container(
+                                width=4, height=20, bgcolor=TEXT_DARK
+                            ),  # 왼쪽 강조 바
                             ft.Text(
                                 "참여 팀 수",
                                 size=15,
@@ -352,7 +360,7 @@ class TeamRegistrationView(ft.Column):
                     ft.Row(
                         self.team_cards,
                         spacing=12,
-                        scroll=ft.ScrollMode.AUTO,   # 카드가 많을 때 가로 스크롤
+                        scroll=ft.ScrollMode.AUTO,  # 카드가 많을 때 가로 스크롤
                     ),
                 ],
                 spacing=10,
@@ -370,10 +378,10 @@ class TeamRegistrationView(ft.Column):
             content=ft.Text(
                 "↺ 초기화", color=TEXT_LIGHT, size=15, weight=ft.FontWeight.W_500
             ),
-            bgcolor="#9A9A9A",   # 회색 — 덜 강조되는 보조 동작
+            bgcolor="#9A9A9A",  # 회색 — 덜 강조되는 보조 동작
             border=ft.Border.all(3, TEXT_DARK),
             height=52,
-            expand=1,           # 1:2 비율로 너비 배분 (초기화:시작)
+            expand=1,  # 1:2 비율로 너비 배분 (초기화:시작)
             alignment=ft.Alignment.CENTER,
             on_click=self._on_reset_click,
         )
@@ -381,10 +389,10 @@ class TeamRegistrationView(ft.Column):
             content=ft.Text(
                 "▶ 게임 시작", color=TEXT_LIGHT, size=17, weight=ft.FontWeight.W_500
             ),
-            bgcolor=ACCENT_RED,   # 빨간색 — 주요 동작 강조
+            bgcolor=ACCENT_RED,  # 빨간색 — 주요 동작 강조
             border=ft.Border.all(3, TEXT_DARK),
             height=52,
-            expand=2,             # 1:2 비율 중 더 넓은 쪽
+            expand=2,  # 1:2 비율 중 더 넓은 쪽
             alignment=ft.Alignment.CENTER,
             on_click=self._on_start_click,
         )
@@ -396,7 +404,7 @@ class TeamRegistrationView(ft.Column):
     def _on_team_count_click(self, e):
         """팀 수 선택 버튼 클릭 시 team_count를 갱신하고 화면을 재빌드한다."""
         if e.control.data == self.team_count:
-            return   # 이미 선택된 팀 수를 다시 클릭한 경우 무시
+            return  # 이미 선택된 팀 수를 다시 클릭한 경우 무시
         self.team_count = e.control.data
         self._build()
         self.update()
@@ -409,16 +417,16 @@ class TeamRegistrationView(ft.Column):
         """
         for i, card in enumerate(self.team_cards):
             if i == idx:
-                continue   # 자기 자신은 건너뜀
+                continue  # 자기 자신은 건너뜀
             if card.selected_color == new_c:
                 # 새로운 색상(new_c)을 쓰던 팀을 이전 색상(old_c)으로 교체
                 card.selected_color = old_c
                 card.header.bgcolor = TEAM_COLORS[old_c]
-                card.bgcolor        = TEAM_CARD_BG[old_c]
+                card.bgcolor = TEAM_CARD_BG[old_c]
                 for btn in card.color_buttons_row.controls:
                     btn.border = ft.Border.all(3 if btn.data == old_c else 1, TEXT_DARK)
                 card.update()
-                break   # 색상은 중복되지 않으므로 하나 찾으면 종료
+                break  # 색상은 중복되지 않으므로 하나 찾으면 종료
 
     def _on_reset_click(self, e):
         """초기화 버튼: 팀 수를 4로, 각 TeamCard를 DEFAULT_PRESETS로 초기화."""
@@ -435,11 +443,11 @@ class TeamRegistrationView(ft.Column):
         # 각 TeamCard의 to_dict()로 입력값을 수집
         teams_data = [c.to_dict() for c in self.team_cards]
         try:
-            self.team_service.create_teams(teams_data)   # DB에 저장
+            self.team_service.create_teams(teams_data)  # DB에 저장
             _snack(
                 self.page, f"✅ {len(teams_data)}개 팀 등록 완료!", ACCENT_GREEN_DARK
             )
-            self.on_register_success()   # 팀 선택 화면으로 이동
+            self.on_register_success()  # 팀 선택 화면으로 이동
         except TeamRegistrationError as ex:
             # 유효성 검사 실패 (이름 중복, 잔액 부족 등)
             _snack(self.page, f"⚠ {ex}", ACCENT_RED)

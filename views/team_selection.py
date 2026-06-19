@@ -48,16 +48,16 @@ class TeamSelectionView(ft.Column):
             expand=True,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
-        self.teams    = teams
+        self.teams = teams
         self.on_select = on_select
-        self.on_back   = on_back
+        self.on_back = on_back
         self._build()
 
     def _build(self):
         """화면 구성요소를 빌드하고 controls에 추가한다."""
         self.controls.clear()
         self.controls.append(self._build_header())
-        self.controls.append(ft.Container(height=20))   # 헤더 아래 여백
+        self.controls.append(ft.Container(height=20))  # 헤더 아래 여백
         self.controls.append(
             ft.Text(
                 "이번 게임에서 어느 팀이신가요?",
@@ -73,9 +73,9 @@ class TeamSelectionView(ft.Column):
                 color=TEXT_MUTED,
             )
         )
-        self.controls.append(ft.Container(height=10))   # 설명 아래 여백
+        self.controls.append(ft.Container(height=10))  # 설명 아래 여백
         self.controls.append(self._build_team_grid())
-        self.controls.append(ft.Container(height=10))   # 그리드 아래 여백
+        self.controls.append(ft.Container(height=10))  # 그리드 아래 여백
         self.controls.append(self._build_back_button())
 
     def _build_header(self):
@@ -116,7 +116,7 @@ class TeamSelectionView(ft.Column):
             ),
             bgcolor=BG_PANEL,
             padding=ft.Padding.symmetric(horizontal=16, vertical=12),
-            width=10000,   # 전체 너비 확장 (Row 내에서 stretch 효과)
+            width=10000,  # 전체 너비 확장 (Row 내에서 stretch 효과)
         )
 
     def _build_team_grid(self):
@@ -129,9 +129,9 @@ class TeamSelectionView(ft.Column):
             content=ft.Row(
                 cards,
                 spacing=16,
-                wrap=True,                              # 카드가 많으면 다음 줄로 넘김
+                wrap=True,  # 카드가 많으면 다음 줄로 넘김
                 alignment=ft.MainAxisAlignment.CENTER,
-                run_spacing=16,                         # 줄 사이 간격
+                run_spacing=16,  # 줄 사이 간격
             ),
             padding=ft.Padding.symmetric(horizontal=16),
         )
@@ -144,11 +144,11 @@ class TeamSelectionView(ft.Column):
         카드 하단: 아바타(':)') + 슬로건 + 현재 잔액
         클릭 이벤트: _on_team_click → on_select(team_id)
         """
-        cc = team["color_code"]   # 팀 색상 코드 (예: 'YELLOW')
+        cc = team["color_code"]  # 팀 색상 코드 (예: 'YELLOW')
         return ft.Container(
             content=ft.Column(
                 [
-                    # 팀 이름 헤더 (팀 색상 배경)
+                    # ── 카드 상단: 팀 이름 헤더 (팀 색상 배경) ──
                     ft.Container(
                         content=ft.Text(
                             team["name"],
@@ -160,7 +160,7 @@ class TeamSelectionView(ft.Column):
                         padding=ft.Padding.symmetric(horizontal=16, vertical=10),
                         alignment=ft.Alignment.CENTER,
                     ),
-                    # 카드 본문 (아바타 + 슬로건 + 잔액)
+                    # ── 카드 하단: 아바타 + 슬로건 + 잔액 ──
                     ft.Container(
                         content=ft.Column(
                             [
@@ -198,18 +198,18 @@ class TeamSelectionView(ft.Column):
                 ],
                 spacing=0,
             ),
-            bgcolor=TEAM_CARD_BG[cc],            # 카드 배경: 팀 색상의 연한 버전
+            bgcolor=TEAM_CARD_BG[cc],  # 카드 배경: 팀 색상의 연한 버전
             border=ft.Border.all(2, TEXT_DARK),
             border_radius=4,
             width=200,
-            ink=True,                            # 클릭 시 잉크 효과
-            data=team["id"],                     # 카드에 team_id를 data로 저장
+            ink=True,  # 클릭 시 잉크 효과
+            data=team["id"],  # 카드에 team_id를 data로 저장
             on_click=self._on_team_click,
         )
 
     def _on_team_click(self, e):
         """팀 카드 클릭 시 해당 팀의 id를 on_select 콜백에 전달한다."""
-        self.on_select(e.control.data)   # e.control.data = team["id"]
+        self.on_select(e.control.data)  # e.control.data = team["id"]
 
     def _build_back_button(self):
         """'팀 등록으로 돌아가기' 버튼. 클릭 시 on_back 콜백을 호출한다."""
@@ -220,7 +220,7 @@ class TeamSelectionView(ft.Column):
                 size=13,
                 weight=ft.FontWeight.W_500,
             ),
-            bgcolor="#9A9A9A",             # 회색 — 보조 동작
+            bgcolor="#9A9A9A",  # 회색 — 보조 동작
             border=ft.Border.all(2, TEXT_DARK),
             width=240,
             height=40,
