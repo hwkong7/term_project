@@ -6,10 +6,6 @@ views/dashboard.py
 요약 카드(거래수/스핀수/총자산), 팀별 상태 카드, 잔액 그래프,
 거래소·룰렛·기록 화면으로 이동하는 메뉴 버튼을 표시한다.
 
-[변경 사항]
-- import 경로: from services → from service (패키지 구조 변경에 따른 수정)
-- self.svc.team_repo.find_by_id(): DashboardService가 team_repo를
-  속성으로 그대로 노출하고 있어 헤더에서 직접 접근 가능
 """
 
 import flet as ft
@@ -73,8 +69,10 @@ class DashboardView(ft.Column):
         각 섹션 빌드 메서드에 전달한다.
         """
         self.controls.clear()
-        summary = self.svc.get_summary()               # 집계 데이터 (거래수, 스핀수, 총 잔액)
-        teams   = self.svc.get_teams_with_status()      # 파생 컬럼(balance_delta 등) 포함 팀 DataFrame
+        summary = self.svc.get_summary()  # 집계 데이터 (거래수, 스핀수, 총 잔액)
+        teams = (
+            self.svc.get_teams_with_status()
+        )  # 파생 컬럼(balance_delta 등) 포함 팀 DataFrame
 
         self.controls.append(self._build_header(summary))
         self.controls.append(self._build_summary_cards(summary))
@@ -123,7 +121,9 @@ class DashboardView(ft.Column):
                         ],
                         spacing=2,
                     ),
-                    ft.Container(expand=True),   # 가운데 빈 공간 — 우측 요소를 오른쪽 끝으로 밀어냄
+                    ft.Container(
+                        expand=True
+                    ),  # 가운데 빈 공간 — 우측 요소를 오른쪽 끝으로 밀어냄
                     # 내 팀 정보 배지 (색상 아이콘 + 팀명 + 팀 변경 버튼)
                     ft.Container(
                         content=ft.Row(
@@ -227,7 +227,7 @@ class DashboardView(ft.Column):
         return ft.Container(
             content=ft.Row(
                 [
-                    ft.Container(width=4, height=20, bgcolor=TEXT_DARK),   # 좌측 강조 바
+                    ft.Container(width=4, height=20, bgcolor=TEXT_DARK),  # 좌측 강조 바
                     ft.Text(text, size=15, weight=ft.FontWeight.W_500, color=TEXT_DARK),
                 ],
                 spacing=8,
@@ -264,10 +264,10 @@ class DashboardView(ft.Column):
           - 그 외                → 일반 테두리
         """
         cc = t["color_code"]
-        delta = int(t["balance_delta"])               # 잔액 변동 (현재 - 초기)
-        hp = int(t["hp_percent"])                      # HP 비율 (0~100)
-        imminent = bool(t["is_bankrupt_imminent"])      # HP < 30% 여부
-        is_me = int(t["id"]) == self.current_team_id    # 현재 플레이어의 팀인지 여부
+        delta = int(t["balance_delta"])  # 잔액 변동 (현재 - 초기)
+        hp = int(t["hp_percent"])  # HP 비율 (0~100)
+        imminent = bool(t["is_bankrupt_imminent"])  # HP < 30% 여부
+        is_me = int(t["id"]) == self.current_team_id  # 현재 플레이어의 팀인지 여부
 
         # 잔액 변동 방향에 따라 텍스트와 색상을 분기
         if delta > 0:
@@ -290,7 +290,7 @@ class DashboardView(ft.Column):
             # 잔액 변동 없음
             delta_text = ft.Text("─ 변동 없음", size=11, color=TEXT_MUTED)
 
-        is_bankrupt = int(t["current_balance"]) <= 0   # 잔액이 0 이하면 파산 상태
+        is_bankrupt = int(t["current_balance"]) <= 0  # 잔액이 0 이하면 파산 상태
 
         # HP 게이지 영역 — 파산 또는 파산 임박 상태일 때만 추가로 표시
         hp_section = []
@@ -381,8 +381,8 @@ class DashboardView(ft.Column):
                                     ],
                                     spacing=10,
                                 ),
-                                delta_text,                # 잔액 변동 표시
-                                *hp_section,                # HP 게이지 (파산/임박 시에만 존재)
+                                delta_text,  # 잔액 변동 표시
+                                *hp_section,  # HP 게이지 (파산/임박 시에만 존재)
                                 ft.Text(
                                     f'"{t.get("slogan", "")}"',
                                     size=10,
@@ -416,14 +416,14 @@ class DashboardView(ft.Column):
         파산 임박 팀의 잔액 텍스트는 빨간색으로 강조된다.
         """
         if len(teams) == 0:
-            return ft.Container()   # 팀이 없으면 빈 컨테이너 반환
+            return ft.Container()  # 팀이 없으면 빈 컨테이너 반환
 
         # 막대 길이 계산 기준이 되는 최댓값 (0으로 나누는 사고를 방지하기 위해 최소 1)
         max_balance = max(int(teams["current_balance"].max()), 1)
         bars = []
         for _, t in teams.iterrows():
             balance = int(t["current_balance"])
-            ratio = balance / max_balance   # 0.0 ~ 1.0 사이의 비율
+            ratio = balance / max_balance  # 0.0 ~ 1.0 사이의 비율
             color = TEAM_COLORS[t["color_code"]]
             # 파산 임박 팀은 잔액 텍스트도 빨간색으로 강조
             text_color = ACCENT_RED if t["is_bankrupt_imminent"] else TEXT_DARK
@@ -478,7 +478,7 @@ class DashboardView(ft.Column):
         return ft.Container(
             content=ft.Container(
                 content=ft.Column(bars, spacing=8),
-                bgcolor="#F5EDD8",              # 양피지 느낌의 배경
+                bgcolor="#F5EDD8",  # 양피지 느낌의 배경
                 border=ft.Border.all(2, TEXT_DARK),
                 padding=12,
             ),
@@ -490,6 +490,7 @@ class DashboardView(ft.Column):
         하단 메뉴 버튼 3개(거래소/룰렛돌리기/기록보기)를 가로로 배치한다.
         내부 btn() 헬퍼 함수로 동일한 레이아웃의 버튼을 반복 생성한다.
         """
+
         def btn(emoji, label, color, handler):
             """단일 메뉴 버튼을 생성하는 내부 헬퍼. 클릭 시 handler() 콜백을 호출한다."""
             return ft.Container(
@@ -506,7 +507,7 @@ class DashboardView(ft.Column):
                 bgcolor=color,
                 border=ft.Border.all(3, TEXT_DARK),
                 height=52,
-                expand=True,                 # 3개 버튼이 가로 폭을 균등 분배
+                expand=True,  # 3개 버튼이 가로 폭을 균등 분배
                 alignment=ft.Alignment.CENTER,
                 on_click=lambda e: handler(),
             )
